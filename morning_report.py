@@ -410,7 +410,21 @@ def send_email(html: str, subject: str) -> bool:
 # ─── MAIN ────────────────────────────────────────────────────────────────────
 CLOUD_MODE = bool(os.environ.get("GMAIL_USER"))   # True when running on GitHub Actions
 
+def check_et_hour():
+    """Exit early if it's not 9 AM ET — handles DST automatically."""
+    try:
+        from zoneinfo import ZoneInfo
+        now_et = datetime.now(ZoneInfo("America/New_York"))
+        if now_et.hour != 9:
+            print(f"Not 9 AM ET (currently {now_et.strftime('%I:%M %p ET')}), skipping.")
+            sys.exit(0)
+    except Exception:
+        pass   # if timezone check fails, run anyway
+
 def main():
+    if CLOUD_MODE:
+        check_et_hour()
+
     print(f"\n{'='*62}")
     print(f"  MORNING REPORT  {datetime.now().strftime('%A %B %d, %Y  %I:%M %p')}")
     print(f"  Mode: {'CLOUD (email)' if CLOUD_MODE else 'LOCAL (browser)'}")
