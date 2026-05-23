@@ -2,9 +2,9 @@ name: Morning Market Report
 
 on:
   schedule:
-    # 9:30 AM EDT (UTC-4) = 13:30 UTC  — weekdays only
-    # Note: change to "30 14 * * 1-5" in November when clocks fall back to EST
-    - cron: '30 13 * * 1-5'
+    # 9:00 AM EDT (UTC-4) = 13:00 UTC  — weekdays only
+    # Note: change to "0 14 * * 1-5" in November when clocks fall back to EST
+    - cron: '0 13 * * 1-5'
   workflow_dispatch:   # lets you trigger it manually from GitHub anytime
 
 env:
