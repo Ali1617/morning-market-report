@@ -1,0 +1,6 @@
+.claude/
+__pycache__/
+*.pkl
+data/
+reports/
+*.pyc

@@ -1,0 +1,138 @@
+//@version=6
+// ═════════════════════════════════════════════════════════════════
+//  Connors RSI-2 Mean-Reversion Strategy (Long-Only)
+//
+//  Published by Larry Connors in "Short Term Trading Strategies That Work."
+//  Designed for liquid stocks and ETFs. Documented win rates 70–85% on
+//  broad indices like SPY/QQQ; profit factor typically 2+.
+//
+//  LOGIC: in an established uptrend, buy short-term pullbacks (RSI(2) very
+//  low), exit when the pullback resolves and price recovers above its
+//  5-day SMA.
+//
+//  RULES:
+//    Long entry — ALL must be true:
+//      • Close > SMA(200)                (long-term uptrend)
+//      • Close > SMA(50)   [optional]    (mid-term uptrend, win-rate +5-10%)
+//      • RSI(2) < 5                      (severe short-term oversold)
+//
+//    Long exit:
+//      • Close > SMA(5)                  (Connors' original exit)
+//      • Optional safety stop at X%      (cap crash exposure)
+//      • Optional max hold N bars        (avoid trades that never recover)
+// ═════════════════════════════════════════════════════════════════
+strategy("Connors RSI-2 Mean Reversion (Long)", overlay=true,
+     default_qty_type=strategy.percent_of_equity,
+     default_qty_value=100,
+     pyramiding=0,
+     process_orders_on_close=true,
+     commission_type=strategy.commission.percent,
+     commission_value=0.0,
+     slippage=2)
+// NOTE: commission default 0 (most US stock brokers commission-free).
+// Tune in Strategy Tester → Properties tab if needed.
+
+// ─────────────────────────────────────────────
+//  INPUTS
+// ─────────────────────────────────────────────
+
+// Trend filters
+sma_long_len     = input.int(200, "Long-term SMA (must be above)", minval=20, group="Trend Filters")
+use_50_sma       = input.bool(true, "Also require Close > SMA(50)", group="Trend Filters")
+sma_mid_len      = input.int(50,  "Mid-term SMA",                  minval=10, group="Trend Filters")
+
+// RSI entry
+rsi_len          = input.int(2,    "RSI Length (Connors=2)",       minval=2, group="Entry")
+rsi_buy_below    = input.float(5,  "Buy when RSI below",           minval=1, maxval=30, group="Entry")
+
+// Exit
+sma_exit_len     = input.int(5,    "Exit SMA (close > this)",      minval=2, group="Exit")
+use_rsi_high_exit = input.bool(false, "Also exit when RSI > X",    group="Exit")
+rsi_exit_above   = input.float(70, "Exit when RSI above",          minval=50, maxval=99, group="Exit")
+
+// Safety stop (Connors' original has no stop — adding is conservative)
+use_safety_stop  = input.bool(true,  "Use safety stop",            group="Safety")
+stop_pct         = input.float(7.0,  "Safety stop %",   step=0.1, minval=0.5, group="Safety")
+use_max_hold     = input.bool(true,  "Max hold period",            group="Safety")
+max_hold_bars    = input.int(10,     "Max bars in trade", minval=2, group="Safety")
+
+// ─────────────────────────────────────────────
+//  CALCULATIONS
+// ─────────────────────────────────────────────
+sma_long = ta.sma(close, sma_long_len)
+sma_mid  = ta.sma(close, sma_mid_len)
+sma_exit = ta.sma(close, sma_exit_len)
+rsi_val  = ta.rsi(close, rsi_len)
+
+// ─────────────────────────────────────────────
+//  ENTRY
+// ─────────────────────────────────────────────
+trend_ok       = close > sma_long and (not use_50_sma or close > sma_mid)
+rsi_oversold   = rsi_val < rsi_buy_below
+buy_signal     = trend_ok and rsi_oversold
+
+// ─────────────────────────────────────────────
+//  EXIT
+// ─────────────────────────────────────────────
+exit_above_sma = close > sma_exit
+exit_rsi_high  = use_rsi_high_exit and rsi_val > rsi_exit_above
+mean_revert_exit = exit_above_sma or exit_rsi_high
+
+// ─────────────────────────────────────────────
+//  STRATEGY
+// ─────────────────────────────────────────────
+var float entry_price = na
+var int   bars_held   = 0
+
+if buy_signal and strategy.position_size == 0
+    strategy.entry("Long", strategy.long)
+    entry_price := close
+    bars_held   := 0
+    alert("BUY — RSI(2) oversold pullback in uptrend", alert.freq_once_per_bar)
+
+if strategy.position_size > 0
+    bars_held += 1
+
+    // Mean-reversion target hit
+    if mean_revert_exit
+        strategy.close("Long", comment="MeanRevert")
+        alert("SELL — close > 5SMA (target hit)", alert.freq_once_per_bar)
+
+    // Safety stop
+    if use_safety_stop
+        stop_level = nz(entry_price, close) * (1 - stop_pct / 100)
+        strategy.exit("SafetyStop", from_entry="Long", stop=stop_level)
+
+    // Max hold timeout
+    if use_max_hold and bars_held >= max_hold_bars
+        strategy.close("Long", comment="MaxHold")
+        alert("SELL — max hold period reached", alert.freq_once_per_bar)
+
+if strategy.position_size == 0
+    entry_price := na
+    bars_held   := 0
+
+// ─────────────────────────────────────────────
+//  PLOTS
+// ─────────────────────────────────────────────
+plot(sma_long, "SMA(200)", color=color.new(color.gray,   30), linewidth=1)
+plot(sma_mid,  "SMA(50)",  color=color.new(color.orange, 30), linewidth=1)
+plot(sma_exit, "SMA(5) — exit target", color=color.new(color.aqua, 0), linewidth=1)
+
+// In-trade background
+in_trade = strategy.position_size > 0
+bgcolor(in_trade ? color.new(color.lime, 92) : na, title="In-Trade")
+
+// Trend regime ribbon (light shading when trend is up)
+bgcolor(trend_ok and not in_trade ? color.new(color.green, 96) : na, title="Trend Up")
+
+plotshape(buy_signal and strategy.position_size == 0,
+     title="BUY", style=shape.labelup, location=location.belowbar,
+     color=color.new(color.lime, 0), text="BUY", textcolor=color.black, size=size.small)
+
+plotshape(mean_revert_exit and strategy.position_size > 0,
+     title="SELL", style=shape.labeldown, location=location.abovebar,
+     color=color.new(color.red, 0), text="SELL", textcolor=color.white, size=size.small)
+
+// RSI(2) in a sub-panel would be nicer but keeping this as overlay-only.
+// To visualize RSI(2), add it as a separate indicator in TradingView.

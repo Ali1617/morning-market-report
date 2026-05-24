@@ -1,0 +1,215 @@
+//@version=6
+// ═════════════════════════════════════════════════════════════════
+//  Confluence Long-Only Strategy — v2 (regime + multi-trigger)
+//
+//  REGIME (must all be true to consider any entry):
+//     • Fast EMA > Slow EMA          (trend aligned)
+//     • Supertrend in uptrend         (volatility-adjusted trend)
+//     • Close > Trend EMA             (higher-TF regime, optional)
+//
+//  TRIGGER (any one fires the entry while in regime):
+//     • Fresh EMA cross UP            (the classic signal)
+//     • RSI crosses up through 50     (momentum re-engages after pullback)
+//     • Close crosses above Fast EMA  (pullback bounce)
+//
+//  FILTERS (applied to whichever trigger fires):
+//     • RSI between min and max       (not overbought)
+//     • Volume spike (optional)
+//
+//  EXIT (any one closes the long):
+//     • ATR trailing stop hit
+//     • Supertrend flips bearish
+//     • Close < Slow EMA              (optional, off by default — too tight)
+// ═════════════════════════════════════════════════════════════════
+strategy("Confluence Long v3 (Let Winners Run)", overlay=true,
+     default_qty_type=strategy.percent_of_equity,
+     default_qty_value=100,
+     pyramiding=0,
+     process_orders_on_close=true,
+     commission_type=strategy.commission.percent,
+     commission_value=0.04,
+     slippage=2)
+// NOTE: tune commission/slippage in Strategy Tester → Properties tab (default 0.04% per side,
+// reasonable for crypto. Set 0 for commission-free stocks/forex demo accounts.)
+
+// ─────────────────────────────────────────────
+//  INPUTS
+// ─────────────────────────────────────────────
+
+// Entry mode
+entry_mode = input.string("Multi-Trigger", "Entry Mode",
+                          options=["Multi-Trigger", "Cross Only"],
+                          group="Entry")
+
+// EMAs
+ema_fast_len     = input.int(8,    "Fast EMA",   minval=1, group="EMAs")
+ema_slow_len     = input.int(21,   "Slow EMA",   minval=1, group="EMAs")
+ema_trend_len    = input.int(200,  "Trend EMA",  minval=20, group="EMAs")
+use_trend_filter = input.bool(true, "Require close above Trend EMA", group="EMAs")
+require_trend_rising = input.bool(true, "Require Trend EMA itself to be rising", group="EMAs")
+trend_rising_lookback = input.int(20, "Trend EMA rising lookback (bars)", minval=5, group="EMAs")
+
+// Trend Strength (ADX)
+use_adx_filter = input.bool(true,  "Require ADX above threshold (trend strength)", group="Trend Strength")
+adx_len        = input.int(14,     "ADX Length", minval=2, group="Trend Strength")
+adx_threshold  = input.float(20,   "Min ADX",    minval=10, maxval=50, group="Trend Strength")
+
+// RSI
+rsi_len = input.int(14,   "RSI Length",                 minval=2,  group="RSI")
+rsi_min = input.float(45, "RSI must be above",          minval=0,  maxval=100, group="RSI")
+rsi_max = input.float(80, "Skip if RSI above this",     minval=50, maxval=100, group="RSI")
+
+// Supertrend
+st_atr_len    = input.int(10,    "Supertrend ATR Length", minval=1, group="Supertrend")
+st_multiplier = input.float(3.0, "Supertrend Multiplier", step=0.1, minval=0.5, group="Supertrend")
+
+// Volume (OFF by default — was the most restrictive filter)
+use_vol_filter = input.bool(false, "Require volume spike",          group="Volume")
+vol_ma_len     = input.int(10,     "Volume MA Length", minval=1,    group="Volume")
+vol_mult       = input.float(1.5,  "Volume must exceed MA×",
+                                   step=0.1, minval=0.1,             group="Volume")
+
+// Exits
+use_atr_trail           = input.bool(true,  "ATR trailing stop",                  group="Exits")
+trail_atr_len           = input.int(14,     "Trail ATR Length",      minval=1,    group="Exits")
+trail_atr_mult          = input.float(3.0,  "Trail ATR Multiplier",  step=0.1,
+                                            minval=0.5,                            group="Exits")
+lock_atr_at_entry       = input.bool(true,  "Lock ATR at entry (chandelier mode)", group="Exits")
+exit_on_ema_inversion   = input.bool(true,  "Exit on Fast EMA crossing BELOW Slow EMA (trend end)", group="Exits")
+exit_on_supertrend_flip = input.bool(false, "Exit on Supertrend flip bearish (noisy)", group="Exits")
+exit_on_ema_break       = input.bool(false, "Exit on close < Slow EMA (very tight)",   group="Exits")
+
+// Initial stop (protective, before trail kicks in)
+init_atr_mult = input.float(2.0, "Initial Stop ATR×", step=0.1, minval=0.5, group="Exits")
+
+// Optional: break-even move after profit threshold
+use_breakeven    = input.bool(true, "Move stop to break-even after profit",  group="Exits")
+breakeven_at_r   = input.float(1.5, "Move to BE when profit ≥ R×",           step=0.1, minval=0.5, group="Exits")
+
+// ─────────────────────────────────────────────
+//  CALCULATIONS
+// ─────────────────────────────────────────────
+ema_fast  = ta.ema(close, ema_fast_len)
+ema_slow  = ta.ema(close, ema_slow_len)
+ema_trend = ta.ema(close, ema_trend_len)
+
+rsi_val = ta.rsi(close, rsi_len)
+
+[st_line, st_direction] = ta.supertrend(st_multiplier, st_atr_len)
+st_up = st_direction < 0  // -1 = uptrend in Pine's ta.supertrend
+
+vol_ma    = ta.sma(volume, vol_ma_len)
+vol_spike = volume > vol_ma * vol_mult
+
+trail_atr = ta.atr(trail_atr_len)
+
+[diPlus, diMinus, adx_val] = ta.dmi(adx_len, adx_len)
+
+trend_rising = ema_trend > ema_trend[trend_rising_lookback]
+
+// ─────────────────────────────────────────────
+//  REGIME — continuous, doesn't need a crossover
+// ─────────────────────────────────────────────
+regime_long = ema_fast > ema_slow
+              and st_up
+              and (not use_trend_filter      or close > ema_trend)
+              and (not require_trend_rising  or trend_rising)
+              and (not use_adx_filter        or adx_val >= adx_threshold)
+
+// ─────────────────────────────────────────────
+//  TRIGGERS — any one fires while in regime
+// ─────────────────────────────────────────────
+trig_cross    = ta.crossover(ema_fast, ema_slow)
+trig_rsi      = ta.crossover(rsi_val, 50)
+trig_pullback = ta.crossover(close, ema_fast)
+
+trigger = entry_mode == "Cross Only" ? trig_cross : (trig_cross or trig_rsi or trig_pullback)
+
+// ─────────────────────────────────────────────
+//  FILTERS
+// ─────────────────────────────────────────────
+filter_rsi = rsi_val > rsi_min and rsi_val < rsi_max
+filter_vol = not use_vol_filter or vol_spike
+
+buy_signal = regime_long and trigger and filter_rsi and filter_vol
+
+// ─────────────────────────────────────────────
+//  EXITS
+// ─────────────────────────────────────────────
+ema_break_exit     = exit_on_ema_break       and ta.crossunder(close, ema_slow)
+supertrend_exit    = exit_on_supertrend_flip and (not st_up) and st_up[1]
+ema_inversion_exit = exit_on_ema_inversion   and ta.crossunder(ema_fast, ema_slow)
+manual_exit        = ema_break_exit or supertrend_exit or ema_inversion_exit
+
+// ─────────────────────────────────────────────
+//  STRATEGY
+// ─────────────────────────────────────────────
+var float current_stop  = na
+var float entry_price   = na
+var float entry_atr     = na  // locked at entry for chandelier-style trail
+var bool  moved_to_be   = false
+
+if buy_signal and strategy.position_size == 0
+    strategy.entry("Long", strategy.long)
+    entry_price  := close
+    entry_atr    := trail_atr
+    current_stop := close - trail_atr * init_atr_mult
+    moved_to_be  := false
+    alert("BUY — regime + trigger fired", alert.freq_once_per_bar)
+
+// While in position: ratchet trail, optionally lock to entry-ATR, optionally move to BE
+if strategy.position_size > 0
+    // Choose ATR source: locked at entry (chandelier) or current bar
+    atr_for_trail = lock_atr_at_entry ? nz(entry_atr, trail_atr) : trail_atr
+
+    if use_atr_trail
+        new_trail = high - atr_for_trail * trail_atr_mult
+        current_stop := math.max(nz(current_stop, new_trail), new_trail)
+
+    // Break-even move: once R-multiple profit reached, lift stop to entry
+    if use_breakeven and not moved_to_be
+        initial_risk = atr_for_trail * init_atr_mult
+        profit_now   = close - nz(entry_price, close)
+        if profit_now >= breakeven_at_r * initial_risk
+            current_stop := math.max(current_stop, nz(entry_price, close))
+            moved_to_be  := true
+
+    strategy.exit("Trail", from_entry="Long", stop=current_stop)
+
+if strategy.position_size > 0 and manual_exit
+    strategy.close("Long", comment="SellSignal")
+    alert("SELL — exit signal triggered", alert.freq_once_per_bar)
+
+if strategy.position_size == 0
+    current_stop := na
+    entry_price  := na
+    entry_atr    := na
+    moved_to_be  := false
+
+// ─────────────────────────────────────────────
+//  PLOTS
+// ─────────────────────────────────────────────
+plot(ema_fast,  "Fast EMA (8)",    color=color.new(color.aqua,   0), linewidth=2)
+plot(ema_slow,  "Slow EMA (21)",   color=color.new(color.orange, 0), linewidth=2)
+plot(ema_trend, "Trend EMA (200)", color=color.new(color.gray,  30), linewidth=1)
+plot(st_line,   "Supertrend",      color=st_up ? color.new(color.green, 0) : color.new(color.red, 0), linewidth=2)
+plot(strategy.position_size > 0 ? current_stop : na,
+     "Active Stop", color=color.new(color.red, 0), style=plot.style_linebr, linewidth=1)
+
+// Regime ribbon — green when we'd consider entries
+bgcolor(regime_long and strategy.position_size == 0 ? color.new(color.green, 96) : na, title="Regime OK")
+bgcolor(strategy.position_size > 0                  ? color.new(color.lime,  92) : na, title="In-Trade")
+
+// Buy/Sell labels — only the trigger that actually entered
+plotshape(buy_signal and strategy.position_size == 0,
+     title="BUY", style=shape.labelup, location=location.belowbar,
+     color=color.new(color.lime, 0), text="BUY", textcolor=color.black, size=size.small)
+
+plotshape(manual_exit and strategy.position_size > 0,
+     title="SELL", style=shape.labeldown, location=location.abovebar,
+     color=color.new(color.red, 0), text="SELL", textcolor=color.white, size=size.small)
+
+// Diagnostic: trigger fired but regime/filter blocked
+filtered = trigger and not buy_signal
+plotshape(filtered, title="Filtered Trigger", style=shape.xcross,
+     location=location.belowbar, color=color.new(color.gray, 0), size=size.tiny)

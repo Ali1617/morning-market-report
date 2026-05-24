@@ -1,0 +1,92 @@
+{
+  "params": {
+    "vwap_rising_lookback": 15,
+    "ema_len": 100,
+    "require_ema_above_vwap": false,
+    "pullback_lookback": 12,
+    "vwap_touch_tolerance": 0.5,
+    "use_vol_filter": true,
+    "vol_ma_len": 20,
+    "vol_mult": 2.0,
+    "atr_len": 21,
+    "init_stop_atr": 2.5,
+    "take_profit_r": 4.0,
+    "exit_on_vwap_loss": false,
+    "skip_first_bars": 3
+  },
+  "metrics": {
+    "pnl_avg": 4.274851531361924,
+    "win_avg": 0.5094020562770563,
+    "pf_avg": 2.7808505117581426,
+    "n_total": 89,
+    "per_stock": {
+      "TSLA": {
+        "pnl_pct": 5.001371006718824,
+        "win_rate": 0.3333333333333333,
+        "profit_factor": 2.07670569993362,
+        "n_trades": 9,
+        "best": 0.04628331316279443,
+        "worst": -0.013449846377813412
+      },
+      "NVDA": {
+        "pnl_pct": 3.778961221601329,
+        "win_rate": 0.5384615384615384,
+        "profit_factor": 1.7301017683341566,
+        "n_trades": 13,
+        "best": 0.02211981298490962,
+        "worst": -0.012266818612223531
+      },
+      "AAPL": {
+        "pnl_pct": 4.885514072436514,
+        "win_rate": 0.5714285714285714,
+        "profit_factor": 2.40098120067248,
+        "n_trades": 14,
+        "best": 0.022021309815088007,
+        "worst": -0.009214620804219822
+      },
+      "NFLX": {
+        "pnl_pct": 8.794937326529539,
+        "win_rate": 0.6666666666666666,
+        "profit_factor": 18.371081598517122,
+        "n_trades": 9,
+        "best": 0.030951856363591296,
+        "worst": -0.0029755700584349594
+      },
+      "AMZN": {
+        "pnl_pct": 2.735535855518667,
+        "win_rate": 0.46153846153846156,
+        "profit_factor": 1.5318564738180462,
+        "n_trades": 13,
+        "best": 0.023776974074757033,
+        "worst": -0.014584682458187686
+      },
+      "PLTR": {
+        "pnl_pct": 3.8091677006767855,
+        "win_rate": 0.5833333333333334,
+        "profit_factor": 1.7660632838199664,
+        "n_trades": 12,
+        "best": 0.04591884888726124,
+        "worst": -0.015406912083122667
+      },
+      "SOFI": {
+        "pnl_pct": -2.1571273618186004,
+        "win_rate": 0.375,
+        "profit_factor": 0.6272460724416373,
+        "n_trades": 8,
+        "best": 0.0247830093863595,
+        "worst": -0.01695483903239346
+      },
+      "HOOD": {
+        "pnl_pct": 7.350452429232335,
+        "win_rate": 0.5454545454545454,
+        "profit_factor": 2.1138495950452327,
+        "n_trades": 11,
+        "best": 0.04981478805406688,
+        "worst": -0.022782268314940388
+      }
+    }
+  },
+  "score": 0.9358701798711282,
+  "history_size": 500,
+  "target_first_hit": null
+}

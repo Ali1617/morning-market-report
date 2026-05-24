@@ -1,0 +1,222 @@
+{
+  "TSLA": {
+    "ticker": "TSLA",
+    "tf": "5m",
+    "strategy": "ma_cross",
+    "seed": 42,
+    "score": 1016.5062177727021,
+    "metrics": {
+      "pnl_pct": 27.235259324958538,
+      "win_rate": 0.6666666666666666,
+      "profit_factor": 6.593331262854616,
+      "n_trades": 9,
+      "best": 0.13107480478155517,
+      "worst": -0.02552685643845304
+    },
+    "params": {
+      "fast_len": 12,
+      "slow_len": 150,
+      "ma_type": "EMA",
+      "slope_len": 2,
+      "slope_min": 0.01,
+      "trail_percent": 5.0,
+      "use_slope": true,
+      "use_trail": false
+    }
+  },
+  "NVDA": {
+    "ticker": "NVDA",
+    "tf": "15m",
+    "strategy": "ma_cross",
+    "seed": 42,
+    "score": 1021.6011165534904,
+    "metrics": {
+      "pnl_pct": 28.51347385060732,
+      "win_rate": 0.8333333333333334,
+      "profit_factor": 29.297558723108562,
+      "n_trades": 6,
+      "best": 0.11338787114126436,
+      "worst": -0.009193838028730687
+    },
+    "params": {
+      "fast_len": 12,
+      "slow_len": 50,
+      "ma_type": "EMA",
+      "slope_len": 7,
+      "slope_min": 0.01,
+      "trail_percent": 8.0,
+      "use_slope": true,
+      "use_trail": false
+    }
+  },
+  "AAPL": {
+    "ticker": "AAPL",
+    "tf": "15m",
+    "strategy": "ma_cross",
+    "seed": 42,
+    "score": 1011.6449022328403,
+    "metrics": {
+      "pnl_pct": 19.21408868418657,
+      "win_rate": 0.6666666666666666,
+      "profit_factor": 5.810397810101426,
+      "n_trades": 18,
+      "best": 0.03844172477047243,
+      "worst": -0.015899686050057846
+    },
+    "params": {
+      "fast_len": 12,
+      "slow_len": 25,
+      "ma_type": "SMA",
+      "slope_len": 5,
+      "slope_min": 1.0,
+      "trail_percent": 1.5,
+      "use_slope": false,
+      "use_trail": false
+    }
+  },
+  "NFLX": {
+    "ticker": "NFLX",
+    "tf": "10m",
+    "strategy": "vwap",
+    "seed": 1,
+    "score": 1006.9471856327535,
+    "metrics": {
+      "pnl_pct": 8.491004662254298,
+      "win_rate": 0.9,
+      "profit_factor": 172.3847957075804,
+      "n_trades": 10,
+      "best": 0.017656181157939037,
+      "worst": -0.00047851527765168517
+    },
+    "params": {
+      "vwap_rising_lookback": 5,
+      "ema_len": 100,
+      "require_ema_above_vwap": false,
+      "pullback_lookback": 3,
+      "vwap_touch_tolerance": 0.5,
+      "use_vol_filter": true,
+      "vol_ma_len": 30,
+      "vol_mult": 2.0,
+      "atr_len": 14,
+      "init_stop_atr": 2.0,
+      "take_profit_r": 3.0,
+      "exit_on_vwap_loss": false,
+      "skip_first_bars": 3
+    }
+  },
+  "AMZN": {
+    "ticker": "AMZN",
+    "tf": "15m",
+    "strategy": "ma_cross",
+    "seed": 42,
+    "score": 1018.3748093794937,
+    "metrics": {
+      "pnl_pct": 25.265362896803857,
+      "win_rate": 0.8,
+      "profit_factor": 26.64644870218109,
+      "n_trades": 5,
+      "best": 0.1921852116935253,
+      "worst": -0.009450551466824492
+    },
+    "params": {
+      "fast_len": 20,
+      "slow_len": 80,
+      "ma_type": "EMA",
+      "slope_len": 5,
+      "slope_min": 0.05,
+      "trail_percent": 1.5,
+      "use_slope": true,
+      "use_trail": false
+    }
+  },
+  "PLTR": {
+    "ticker": "PLTR",
+    "tf": "10m",
+    "strategy": "vwap",
+    "seed": 42,
+    "score": 1011.7384003304544,
+    "metrics": {
+      "pnl_pct": 12.91224036349985,
+      "win_rate": 1.0,
+      "profit_factor": "inf",
+      "n_trades": 10,
+      "best": 0.041265270228274455,
+      "worst": 0.0011379445164562667
+    },
+    "params": {
+      "vwap_rising_lookback": 15,
+      "ema_len": 100,
+      "require_ema_above_vwap": true,
+      "pullback_lookback": 12,
+      "vwap_touch_tolerance": 0.5,
+      "use_vol_filter": true,
+      "vol_ma_len": 20,
+      "vol_mult": 1.2,
+      "atr_len": 7,
+      "init_stop_atr": 2.5,
+      "take_profit_r": 4.0,
+      "exit_on_vwap_loss": false,
+      "skip_first_bars": 6
+    }
+  },
+  "SOFI": {
+    "ticker": "SOFI",
+    "tf": "10m",
+    "strategy": "vwap",
+    "seed": 1,
+    "score": 1006.5015665619226,
+    "metrics": {
+      "pnl_pct": 10.216747454449848,
+      "win_rate": 0.7,
+      "profit_factor": 9.020720454726314,
+      "n_trades": 10,
+      "best": 0.02960687496216547,
+      "worst": -0.00604852130284527
+    },
+    "params": {
+      "vwap_rising_lookback": 30,
+      "ema_len": 100,
+      "require_ema_above_vwap": true,
+      "pullback_lookback": 12,
+      "vwap_touch_tolerance": 0.1,
+      "use_vol_filter": true,
+      "vol_ma_len": 30,
+      "vol_mult": 1.2,
+      "atr_len": 7,
+      "init_stop_atr": 2.0,
+      "take_profit_r": 1.5,
+      "exit_on_vwap_loss": false,
+      "skip_first_bars": 0
+    }
+  },
+  "HOOD": {
+    "ticker": "HOOD",
+    "tf": "15m",
+    "strategy": "vwap",
+    "seed": 1,
+    "score": 1012.4915815941679,
+    "metrics": {
+      "pnl_pct": 17.17592469198084,
+      "win_rate": 0.8,
+      "profit_factor": 4598.523485413977,
+      "n_trades": 5,
+      "best": 0.061007282225482545,
+      "worst": -3.528214352197705e-05
+    },
+    "params": {
+      "vwap_rising_lookback": 10,
+      "ema_len": 50,
+      "require_ema_above_vwap": false,
+      "pullback_lookback": 8,
+      "vwap_touch_tolerance": 0.5,
+      "use_vol_filter": true,
+      "vol_ma_len": 30,
+      "vol_mult": 2.0,
+      "atr_len": 7,
+      "init_stop_atr": 2.0,
+      "take_profit_r": 4.0,
+      "exit_on_vwap_loss": true,
+      "skip_first_bars": 6
+    }
+  }
+}

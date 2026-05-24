@@ -1,0 +1,134 @@
+//@version=6
+// ═════════════════════════════════════════════════════════════════
+//  Slop MA-Cross — ML-Tuned PER STOCK
+//  Use this script on: TSLA (5m), NVDA (15m), AAPL (15m), AMZN (15m)
+//
+//  Parameters are HARDCODED per-ticker via switch syminfo.ticker
+//  (Pine's input.int requires const defval, so per-symbol defaults
+//   can't come through input fields — they're computed directly.)
+//
+//  TIMEFRAME must be set manually on the chart — defaults shown above.
+//
+//  Per-stock backtest results (60 days, daily-close intraday data):
+//     TSLA  5m   +27.2% / 67% / PF  6.6   (9 trades)
+//     NVDA  15m  +28.5% / 83% / PF 29.3   (6 trades)
+//     AAPL  15m  +19.2% / 67% / PF  5.8   (18 trades)
+//     AMZN  15m  +25.3% / 80% / PF 26.6   (5 trades)
+//
+//  ⚠ OVERFITTING WARNING: trade counts of 5-9 are statistically thin.
+//     Verify on TradingView and treat as starting point, not certainty.
+// ═════════════════════════════════════════════════════════════════
+strategy("Slop ML-Tuned Per-Stock (MA-Cross)", overlay=true,
+     default_qty_type=strategy.percent_of_equity,
+     default_qty_value=100,
+     pyramiding=0,
+     process_orders_on_close=true,
+     commission_type=strategy.commission.percent,
+     commission_value=0.1,
+     slippage=2)
+
+// ─────────────────────────────────────────────
+//  PER-STOCK PARAMETERS (computed from ticker)
+// ─────────────────────────────────────────────
+tk = syminfo.ticker
+
+fast_len = switch tk
+    "TSLA" => 12
+    "NVDA" => 12
+    "AAPL" => 12
+    "AMZN" => 20
+    => 12
+
+slow_len = switch tk
+    "TSLA" => 150
+    "NVDA" => 50
+    "AAPL" => 25
+    "AMZN" => 80
+    => 50
+
+ma_type = switch tk
+    "AAPL" => "SMA"
+    => "EMA"
+
+slope_len = switch tk
+    "TSLA" => 2
+    "NVDA" => 7
+    "AAPL" => 5
+    "AMZN" => 5
+    => 5
+
+slope_min = switch tk
+    "TSLA" => 0.01
+    "NVDA" => 0.01
+    "AAPL" => 1.0
+    "AMZN" => 0.05
+    => 0.05
+
+trail_percent = switch tk
+    "TSLA" => 5.0
+    "NVDA" => 8.0
+    "AAPL" => 1.5
+    "AMZN" => 1.5
+    => 1.5
+
+use_slope = switch tk
+    "AAPL" => false
+    => true
+
+// All per-stock optimums had use_trail = false
+use_trail = false
+
+// ─────────────────────────────────────────────
+//  CALCULATIONS
+// ─────────────────────────────────────────────
+fast_ma = ma_type == "EMA" ? ta.ema(close, fast_len) : ta.sma(close, fast_len)
+slow_ma = ma_type == "EMA" ? ta.ema(close, slow_len) : ta.sma(close, slow_len)
+
+fast_slope = (fast_ma - fast_ma[slope_len]) / fast_ma[slope_len] * 100
+slow_slope = (slow_ma - slow_ma[slope_len]) / slow_ma[slope_len] * 100
+slope_ok = use_slope ? (math.abs(fast_slope) >= slope_min and math.abs(slow_slope) >= slope_min) : true
+
+buy_signal  = ta.crossover(fast_ma, slow_ma)
+sell_signal = ta.crossunder(fast_ma, slow_ma)
+
+valid_buy = buy_signal and slope_ok
+
+// ─────────────────────────────────────────────
+//  STRATEGY
+// ─────────────────────────────────────────────
+if valid_buy
+    strategy.entry("Long", strategy.long)
+    alert("BUY — MA cross (" + tk + ")", alert.freq_once_per_bar)
+
+if sell_signal
+    strategy.close("Long")
+    alert("SELL — MA cross (" + tk + ")", alert.freq_once_per_bar)
+
+if use_trail
+    trail_points = strategy.position_avg_price * (trail_percent / 100) / syminfo.mintick
+    strategy.exit("Trail", from_entry="Long", trail_points=trail_points, trail_offset=trail_points)
+
+// ─────────────────────────────────────────────
+//  PLOTS
+// ─────────────────────────────────────────────
+plot(fast_ma, title="Fast MA", color=color.new(color.aqua,   0), linewidth=2)
+plot(slow_ma, title="Slow MA", color=color.new(color.orange, 0), linewidth=2)
+
+plotshape(valid_buy, title="BUY", style=shape.labelup, location=location.belowbar,
+     color=color.new(color.lime, 0), text="BUY", textcolor=color.black, size=size.small)
+plotshape(sell_signal, title="SELL", style=shape.labeldown, location=location.abovebar,
+     color=color.new(color.red, 0), text="SELL", textcolor=color.white, size=size.small)
+
+bgcolor(strategy.position_size > 0 ? color.new(color.lime, 90) : na, title="In-Trade")
+
+// Show which preset is being used
+var label preset_label = na
+if barstate.islast
+    label.delete(preset_label)
+    preset_text = tk + " preset: " + str.tostring(fast_len) + "/" + str.tostring(slow_len) +
+                  " " + ma_type + " | slope=" + (use_slope ? "on" : "off") +
+                  " | trail=" + (use_trail ? str.tostring(trail_percent) + "%" : "off")
+    preset_label := label.new(bar_index, high, preset_text,
+                              style=label.style_label_down,
+                              color=color.new(color.blue, 50),
+                              textcolor=color.white, size=size.small)

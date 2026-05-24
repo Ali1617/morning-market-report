@@ -1,0 +1,165 @@
+//@version=6
+// ═════════════════════════════════════════════════════════════════
+//  VWAP Pullback Intraday Strategy (Long-Only) — 5/10m stocks
+//
+//  Concept: in an established intraday uptrend, buy the pullback to
+//  VWAP. VWAP is the institutional benchmark — most algos defend it.
+//  When a stock that's been trading above VWAP dips back to it and
+//  reclaims, the bounce is high-probability.
+//
+//  REGIME (all true to consider entries):
+//     • VWAP rising over last N bars       (intraday uptrend)
+//     • EMA(20) > VWAP                     (short-term momentum aligned)
+//     • Within trading session window       (skip open volatility & close)
+//
+//  TRIGGER (pullback to VWAP then bounce):
+//     • Recent bar's low touched or crossed VWAP (within last N bars)
+//     • Current bar closes back above VWAP
+//     • Current bar is bullish (close > open)
+//     • Volume above MA × multiplier
+//
+//  EXIT:
+//     • ATR-based stop  (initial)
+//     • R-multiple take profit
+//     • OR: close < VWAP (regime break)
+//     • Session end forced close (no overnight risk on intraday)
+// ═════════════════════════════════════════════════════════════════
+strategy("VWAP Pullback Intraday (Long, 5/10m)", overlay=true,
+     default_qty_type=strategy.percent_of_equity,
+     default_qty_value=100,
+     pyramiding=0,
+     process_orders_on_close=true,
+     commission_type=strategy.commission.percent,
+     commission_value=0.0,
+     slippage=2)
+// NOTE: commission 0 for commission-free US stock brokers.
+// Adjust in Strategy Tester → Properties if needed.
+
+// ─────────────────────────────────────────────
+//  INPUTS
+// ─────────────────────────────────────────────
+
+// Regime
+vwap_rising_lookback = input.int(10,  "VWAP rising over last N bars", minval=2, group="Regime")
+ema_len              = input.int(20,  "EMA Length",                   minval=2, group="Regime")
+require_ema_above_vwap = input.bool(true, "Require EMA > VWAP",                  group="Regime")
+
+// Pullback detection
+pullback_lookback    = input.int(8,   "Look for VWAP touch within last N bars", minval=2, maxval=20, group="Pullback")
+vwap_touch_tolerance = input.float(0.15, "VWAP touch tolerance %",   step=0.05, minval=0.0, group="Pullback")
+
+// Volume filter
+use_vol_filter = input.bool(true, "Require volume above MA",                group="Volume")
+vol_ma_len     = input.int(20,    "Volume MA Length",          minval=1,    group="Volume")
+vol_mult       = input.float(1.2, "Volume must exceed MA×",    step=0.1, minval=0.1, group="Volume")
+
+// Session — skip first N minutes (opening volatility) and last M minutes (no overnight)
+use_session_filter = input.bool(true, "Use trading session window",                group="Session")
+session_window     = input.session("0945-1530", "Trade session (NY time)",         group="Session")
+// Default 9:45 - 15:30 ET — skips first 15 min of open and last 30 min before close.
+// Strategy uses chart's exchange timezone; for US stocks set chart TZ to "America/New_York".
+
+force_close_eod    = input.bool(true, "Force-close any open position at session end", group="Session")
+
+// Exits — risk management
+atr_len        = input.int(14,    "ATR Length",                   minval=1,  group="Exits")
+init_stop_atr  = input.float(1.5, "Initial Stop = ATR ×",         step=0.1,  minval=0.5, group="Exits")
+take_profit_r  = input.float(2.0, "Take Profit = R ×",            step=0.1,  minval=0.5, group="Exits")
+exit_on_vwap_loss = input.bool(true, "Exit if close < VWAP (regime break)", group="Exits")
+
+// ─────────────────────────────────────────────
+//  CALCULATIONS
+// ─────────────────────────────────────────────
+vwap_val = ta.vwap
+ema_val  = ta.ema(close, ema_len)
+atr_val  = ta.atr(atr_len)
+
+vol_ma   = ta.sma(volume, vol_ma_len)
+vol_ok   = not use_vol_filter or volume > vol_ma * vol_mult
+
+// Regime checks
+vwap_rising  = vwap_val > vwap_val[vwap_rising_lookback]
+ema_above    = not require_ema_above_vwap or ema_val > vwap_val
+
+// In-session check
+in_session = not use_session_filter or not na(time(timeframe.period, session_window))
+
+regime_long = vwap_rising and ema_above and in_session
+
+// ─────────────────────────────────────────────
+//  PULLBACK DETECTION
+// ─────────────────────────────────────────────
+// Did any of the last N bars touch VWAP (low ≤ VWAP + tolerance)?
+vwap_upper_tol = vwap_val * (1 + vwap_touch_tolerance / 100)
+recent_touch = false
+for i = 1 to pullback_lookback
+    if low[i] <= vwap_upper_tol[i]
+        recent_touch := true
+
+// Bounce confirmation on current bar
+bounce_now  = close > vwap_val and close > open and close > close[1]
+
+buy_signal = regime_long and recent_touch and bounce_now and vol_ok
+
+// ─────────────────────────────────────────────
+//  EXITS
+// ─────────────────────────────────────────────
+var float entry_price = na
+var float stop_price  = na
+var float tp_price    = na
+
+session_ended = use_session_filter and na(time(timeframe.period, session_window)) and not na(time(timeframe.period, session_window)[1])
+
+if buy_signal and strategy.position_size == 0
+    strategy.entry("Long", strategy.long)
+    entry_price := close
+    stop_price  := close - atr_val * init_stop_atr
+    tp_price    := close + atr_val * init_stop_atr * take_profit_r
+    alert("BUY — VWAP pullback bounce in uptrend", alert.freq_once_per_bar)
+
+if strategy.position_size > 0
+    strategy.exit("TP/Stop", from_entry="Long", stop=stop_price, limit=tp_price)
+
+    // Regime-break exit: close cleanly below VWAP
+    if exit_on_vwap_loss and ta.crossunder(close, vwap_val)
+        strategy.close("Long", comment="VWAPlost")
+        alert("SELL — close below VWAP", alert.freq_once_per_bar)
+
+    // End-of-session forced close
+    if force_close_eod and session_ended
+        strategy.close("Long", comment="EOD")
+        alert("SELL — session end close", alert.freq_once_per_bar)
+
+if strategy.position_size == 0
+    entry_price := na
+    stop_price  := na
+    tp_price    := na
+
+// ─────────────────────────────────────────────
+//  PLOTS
+// ─────────────────────────────────────────────
+plot(vwap_val, "VWAP",      color=color.new(color.purple, 0), linewidth=2)
+plot(ema_val,  "EMA(20)",   color=color.new(color.orange, 0), linewidth=2)
+
+plot(strategy.position_size > 0 ? stop_price : na,
+     "Stop", color=color.new(color.red, 0), style=plot.style_linebr, linewidth=1)
+plot(strategy.position_size > 0 ? tp_price : na,
+     "Take Profit", color=color.new(color.green, 0), style=plot.style_linebr, linewidth=1)
+
+// Regime / in-trade backgrounds
+in_trade = strategy.position_size > 0
+bgcolor(in_trade ? color.new(color.lime, 92)
+                 : (regime_long ? color.new(color.green, 96) : na),
+       title="Regime/In-Trade")
+
+// Out-of-session shading
+bgcolor(use_session_filter and not in_session ? color.new(color.gray, 92) : na, title="Out-of-Session")
+
+plotshape(buy_signal and strategy.position_size == 0,
+     title="BUY", style=shape.labelup, location=location.belowbar,
+     color=color.new(color.lime, 0), text="BUY", textcolor=color.black, size=size.small)
+
+// Diagnostic: bounce happened but regime/volume blocked
+filtered_bounce = recent_touch and bounce_now and not buy_signal
+plotshape(filtered_bounce, title="Filtered Bounce", style=shape.xcross,
+     location=location.belowbar, color=color.new(color.gray, 0), size=size.tiny)

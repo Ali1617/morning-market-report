@@ -1,0 +1,198 @@
+//@version=6
+// ═════════════════════════════════════════════════════════════════
+//  VWAP Pullback — ML-Tuned PER STOCK
+//  Use this script on: NFLX (10m), PLTR (10m), SOFI (10m), HOOD (15m)
+//
+//  Parameters are HARDCODED per-ticker via switch syminfo.ticker
+//  (Pine's input requires const defval, so per-symbol defaults
+//   can't be inputs — they're computed directly.)
+//
+//  TIMEFRAME must be set manually on the chart — defaults above.
+//
+//  Per-stock backtest results (60 days):
+//     NFLX  10m  +8.5%  /  90% / PF 172    (10 trades)
+//     PLTR  10m  +12.9% / 100% / PF  inf   (10 trades)
+//     SOFI  10m  +10.2% /  70% / PF 9.0    (10 trades)
+//     HOOD  15m  +17.2% /  80% / PF 4598   (5 trades)
+//
+//  ⚠ OVERFITTING WARNING: PF values of 100+/4598/inf reflect 5-10
+//     trades with near-zero losses. Not reliable PF predictors.
+// ═════════════════════════════════════════════════════════════════
+strategy("VWAP Pullback ML-Tuned Per-Stock", overlay=true,
+     default_qty_type=strategy.percent_of_equity,
+     default_qty_value=100,
+     pyramiding=0,
+     process_orders_on_close=true,
+     commission_type=strategy.commission.percent,
+     commission_value=0.1,
+     slippage=2)
+
+// ─────────────────────────────────────────────
+//  PER-STOCK PARAMETERS (computed from ticker)
+// ─────────────────────────────────────────────
+tk = syminfo.ticker
+
+vwap_rising_lookback = switch tk
+    "NFLX" => 5
+    "PLTR" => 15
+    "SOFI" => 30
+    "HOOD" => 10
+    => 10
+
+ema_len = switch tk
+    "HOOD" => 50
+    => 100
+
+require_ema_above_vwap = switch tk
+    "PLTR" => true
+    "SOFI" => true
+    => false
+
+pullback_lookback = switch tk
+    "NFLX" => 3
+    "PLTR" => 12
+    "SOFI" => 12
+    "HOOD" => 8
+    => 8
+
+vwap_touch_tolerance = switch tk
+    "SOFI" => 0.1
+    => 0.5
+
+use_vol_filter = true
+
+vol_ma_len = switch tk
+    "PLTR" => 20
+    => 30
+
+vol_mult = switch tk
+    "PLTR" => 1.2
+    "SOFI" => 1.2
+    => 2.0
+
+atr_len = switch tk
+    "NFLX" => 14
+    => 7
+
+init_stop_atr = switch tk
+    "PLTR" => 2.5
+    => 2.0
+
+take_profit_r = switch tk
+    "NFLX" => 3.0
+    "SOFI" => 1.5
+    => 4.0
+
+exit_on_vwap_loss = switch tk
+    "HOOD" => true
+    => false
+
+skip_first_bars = switch tk
+    "NFLX" => 3
+    "PLTR" => 6
+    "SOFI" => 0
+    "HOOD" => 6
+    => 3
+
+// Session config (same for all stocks)
+use_session_filter = true
+session_window     = "0930-1545"
+force_close_eod    = true
+
+// ─────────────────────────────────────────────
+//  CALCULATIONS
+// ─────────────────────────────────────────────
+vwap_val = ta.vwap
+ema_val  = ta.ema(close, ema_len)
+atr_val  = ta.atr(atr_len)
+vol_ma   = ta.sma(volume, vol_ma_len)
+vol_ok   = not use_vol_filter or volume > vol_ma * vol_mult
+
+// Bars since session start
+var int bars_since_session_start = 0
+new_day = not na(time(timeframe.period, "0930-0945"))
+in_session_now = not na(time(timeframe.period, session_window))
+in_session_prev = not na(time(timeframe.period, session_window)[1])
+if new_day or (use_session_filter and not in_session_now and in_session_prev)
+    bars_since_session_start := 0
+else
+    bars_since_session_start += 1
+
+// Regime
+vwap_rising  = vwap_val > vwap_val[vwap_rising_lookback]
+ema_above    = not require_ema_above_vwap or ema_val > vwap_val
+in_session   = not use_session_filter or in_session_now
+past_warmup  = bars_since_session_start >= skip_first_bars
+regime_long  = vwap_rising and ema_above and in_session and past_warmup
+
+// Pullback detection
+vwap_upper_tol = vwap_val * (1 + vwap_touch_tolerance / 100)
+recent_touch = false
+for i = 1 to pullback_lookback
+    if low[i] <= vwap_upper_tol[i]
+        recent_touch := true
+
+// Bounce confirmation
+bounce_now = close > vwap_val and close > open and close > close[1]
+buy_signal = regime_long and recent_touch and bounce_now and vol_ok
+
+// ─────────────────────────────────────────────
+//  STRATEGY
+// ─────────────────────────────────────────────
+var float entry_price = na
+var float stop_price  = na
+var float tp_price    = na
+
+session_ending = use_session_filter and not in_session_now and in_session_prev
+
+if buy_signal and strategy.position_size == 0
+    strategy.entry("Long", strategy.long)
+    entry_price := close
+    stop_price  := close - atr_val * init_stop_atr
+    tp_price    := close + atr_val * init_stop_atr * take_profit_r
+    alert("BUY — VWAP pullback (" + tk + ")", alert.freq_once_per_bar)
+
+if strategy.position_size > 0
+    strategy.exit("OCO", from_entry="Long", stop=stop_price, limit=tp_price)
+    if exit_on_vwap_loss and ta.crossunder(close, vwap_val)
+        strategy.close("Long", comment="VWAPlost")
+    if force_close_eod and session_ending
+        strategy.close("Long", comment="EOD")
+
+if strategy.position_size == 0
+    entry_price := na
+    stop_price  := na
+    tp_price    := na
+
+// ─────────────────────────────────────────────
+//  PLOTS
+// ─────────────────────────────────────────────
+plot(vwap_val, "VWAP",   color=color.new(color.purple, 0), linewidth=2)
+plot(ema_val,  "EMA",    color=color.new(color.orange, 0), linewidth=2)
+plot(strategy.position_size > 0 ? stop_price : na, "Stop",
+     color=color.new(color.red, 0), style=plot.style_linebr, linewidth=1)
+plot(strategy.position_size > 0 ? tp_price : na, "TP",
+     color=color.new(color.green, 0), style=plot.style_linebr, linewidth=1)
+
+in_trade = strategy.position_size > 0
+bgcolor(in_trade ? color.new(color.lime, 92)
+                 : (regime_long ? color.new(color.green, 96) : na),
+       title="Regime/In-Trade")
+bgcolor(use_session_filter and not in_session ? color.new(color.gray, 92) : na, title="Out-of-Session")
+
+plotshape(buy_signal and strategy.position_size == 0,
+     title="BUY", style=shape.labelup, location=location.belowbar,
+     color=color.new(color.lime, 0), text="BUY", textcolor=color.black, size=size.tiny)
+
+// Show preset on chart
+var label preset_label = na
+if barstate.islast
+    label.delete(preset_label)
+    preset_text = tk + ": VWAP-rise=" + str.tostring(vwap_rising_lookback) +
+                  " EMA=" + str.tostring(ema_len) +
+                  " TP=" + str.tostring(take_profit_r) + "R" +
+                  " stop=" + str.tostring(init_stop_atr) + "×ATR"
+    preset_label := label.new(bar_index, high, preset_text,
+                              style=label.style_label_down,
+                              color=color.new(color.purple, 50),
+                              textcolor=color.white, size=size.small)
