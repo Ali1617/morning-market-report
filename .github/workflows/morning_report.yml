@@ -29,9 +29,9 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run morning report
+      - name: Run macro report
         env:
           GMAIL_USER:         ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           REPORT_EMAIL:       ${{ secrets.REPORT_EMAIL }}
-        run: python morning_report.py
+        run: python forexfactory_report.py
