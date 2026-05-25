@@ -2,10 +2,10 @@ name: Morning Market Report
 
 on:
   schedule:
-    # Runs at both possible UTC times for 9 AM ET
-    # The script checks the actual ET hour and exits early if it's not 9 AM
-    - cron: '0 13 * * 1-5'   # 9 AM EDT (summer)
-    - cron: '0 14 * * 1-5'   # 9 AM EST (winter)
+    # Runs at both possible UTC times for 8:30 AM ET
+    # The script checks the actual ET time and exits early if it's not 8:30 AM
+    - cron: '30 12 * * 1-5'   # 8:30 AM EDT (summer)
+    - cron: '30 13 * * 1-5'   # 8:30 AM EST (winter)
   workflow_dispatch:   # lets you trigger it manually from GitHub anytime
 
 env:

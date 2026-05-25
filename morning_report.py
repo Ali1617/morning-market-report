@@ -415,8 +415,8 @@ def check_et_hour():
     try:
         from zoneinfo import ZoneInfo
         now_et = datetime.now(ZoneInfo("America/New_York"))
-        if now_et.hour != 9:
-            print(f"Not 9 AM ET (currently {now_et.strftime('%I:%M %p ET')}), skipping.")
+        if now_et.hour != 8 or now_et.minute < 28:
+            print(f"Not 8:30 AM ET (currently {now_et.strftime('%I:%M %p ET')}), skipping.")
             sys.exit(0)
     except Exception:
         pass   # if timezone check fails, run anyway
