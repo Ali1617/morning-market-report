@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 """
-Macro-Driven Morning Stock Report
--  Scrapes Trading Economics economic calendar (USD events)
--  Analyzes macro sentiment (bullish / bearish / neutral)
--  Selects top 10 long candidates from S&P 500 and NDX 100
-   based on: macro tailwinds + pre-market momentum + news
--  Emails a full HTML report at 9 AM ET every weekday
-No PineScript / backtest code used — pure fundamental + news selection.
+Macro-Driven Morning Stock Report  —  Premium Edition
+- Scrapes Trading Economics for USD economic events
+- Scores S&P 500 + NDX 100 stocks by macro tailwind + momentum + news
+- Publishes a full premium HTML report to GitHub Pages (docs/index.html)
+- Emails a clean summary card with a single "Open Report" link
 """
 
-import os, sys, smtplib, warnings
+import os, sys, smtplib, warnings, json
 import requests
 import pandas as pd
 import yfinance as yf
@@ -21,7 +19,8 @@ from email.mime.text import MIMEText
 warnings.filterwarnings("ignore")
 
 CLOUD_MODE  = bool(os.environ.get("GMAIL_USER"))
-OUTPUT_DIR  = r"D:\Claude\reports"
+REPORT_URL  = os.environ.get("REPORT_URL", "https://ali1617.github.io/morning-market-report/")
+OUTPUT_DIR  = "docs"           # GitHub Pages serves from /docs
 TOP_N       = 10
 
 HEADERS = {
@@ -29,602 +28,689 @@ HEADERS = {
                   "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     "Accept-Language": "en-US,en;q=0.9",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Referer": "https://tradingeconomics.com/",
 }
 
 # ─── STOCK UNIVERSE ───────────────────────────────────────────────────────────
 SP500_SECTORS = {
-    "Technology":            ["AAPL","MSFT","NVDA","AVGO","ORCL","CRM","ACN","CSCO","TXN","QCOM",
-                              "AMD","MU","ADI","AMAT","KLAC","LRCX","IBM","HPQ","INTC","DELL"],
-    "Consumer Discretionary":["AMZN","TSLA","HD","MCD","NKE","SBUX","TGT","LOW","BKNG","MAR",
-                              "HLT","RCL","CCL","F","GM","RIVN"],
-    "Financials":            ["JPM","BAC","WFC","GS","MS","BLK","AXP","V","MA","SPGI",
-                              "MCO","C","USB","CME","SCHW","COF"],
-    "Healthcare":            ["UNH","LLY","JNJ","ABBV","MRK","TMO","ABT","DHR","BSX",
-                              "ISRG","ELV","VRTX","REGN","CI","HUM"],
-    "Industrials":           ["GE","CAT","RTX","HON","DE","BA","UNP","UPS","FDX","ETN",
-                              "ITW","NOC","LMT","NSC","CSX","MMM"],
-    "Energy":                ["XOM","CVX","COP","SLB","EOG","MPC","PSX","VLO","BKR","HAL","OXY"],
-    "Communication":         ["META","GOOGL","NFLX","DIS","CMCSA","T","VZ","CHTR","EA","TTWO"],
-    "Materials":             ["LIN","APD","SHW","FCX","NEM","ECL","ALB","NUE","DD","CF"],
-    "Real Estate":           ["PLD","AMT","EQIX","WELL","PSA","SPG","O","VICI"],
-    "Utilities":             ["NEE","DUK","SO","AEP","XEL","EXC","SRE","D"],
-    "Consumer Staples":      ["WMT","PG","COST","KO","PEP","PM","MDLZ","CL","GIS","KHC"],
+    "Technology":             ["AAPL","MSFT","NVDA","AVGO","ORCL","CRM","ACN","CSCO","TXN","QCOM",
+                               "AMD","MU","ADI","AMAT","KLAC","LRCX","IBM","INTC","HPQ","DELL"],
+    "Consumer Discretionary": ["AMZN","TSLA","HD","MCD","NKE","SBUX","TGT","LOW","BKNG","MAR",
+                               "HLT","RCL","CCL","F","GM"],
+    "Financials":             ["JPM","BAC","WFC","GS","MS","BLK","AXP","V","MA","SPGI",
+                               "MCO","C","USB","CME","SCHW","COF"],
+    "Healthcare":             ["UNH","LLY","JNJ","ABBV","MRK","TMO","ABT","DHR","BSX",
+                               "ISRG","ELV","VRTX","REGN","CI","HUM"],
+    "Industrials":            ["GE","CAT","RTX","HON","DE","BA","UNP","UPS","FDX","ETN",
+                               "ITW","NOC","LMT","NSC","CSX","MMM"],
+    "Energy":                 ["XOM","CVX","COP","SLB","EOG","MPC","PSX","VLO","BKR","HAL","OXY"],
+    "Communication":          ["META","GOOGL","NFLX","DIS","CMCSA","T","VZ","CHTR","EA"],
+    "Materials":              ["LIN","APD","SHW","FCX","NEM","ECL","ALB","NUE"],
+    "Consumer Staples":       ["WMT","PG","COST","KO","PEP","PM","MDLZ","CL"],
 }
 
 NDX_SECTORS = {
-    "Semiconductors":        ["NVDA","AMD","AVGO","INTC","QCOM","TXN","MU","AMAT","KLAC",
-                              "LRCX","SNPS","CDNS","MRVL","ON","MCHP","GFS","NXPI","SMCI"],
-    "Mega Cap Tech":         ["AAPL","MSFT","GOOGL","AMZN","META","TSLA"],
-    "Software / Cloud":      ["ADBE","INTU","CRWD","PANW","FTNT","ZS","DDOG","PLTR",
-                              "WDAY","TEAM","ADSK","TTD","COIN","HOOD"],
-    "Consumer / Retail":     ["COST","SBUX","MELI","ABNB","NFLX","BKNG"],
-    "Biotech / Health":      ["GILD","AMGN","VRTX","REGN","MRNA","BIIB","IDXX"],
-    "Industrials / Energy":  ["PCAR","HON","BKR","FSLR","CEG","CSX","FAST"],
-    "Other":                 ["MNST","KDP","MDLZ","PEP","CHTR","CMCSA","EA"],
+    "Semiconductors":         ["NVDA","AMD","AVGO","INTC","QCOM","TXN","MU","AMAT","KLAC",
+                               "LRCX","SNPS","CDNS","MRVL","ON","MCHP","GFS","NXPI","SMCI"],
+    "Mega Cap Tech":          ["AAPL","MSFT","GOOGL","AMZN","META","TSLA"],
+    "Software / Cloud":       ["ADBE","INTU","CRWD","PANW","FTNT","ZS","DDOG","PLTR",
+                               "WDAY","TEAM","ADSK","TTD","COIN","HOOD"],
+    "Consumer / Retail":      ["COST","SBUX","MELI","ABNB","NFLX","BKNG"],
+    "Biotech / Health":       ["GILD","AMGN","VRTX","REGN","MRNA","BIIB","IDXX"],
+    "Industrials / Energy":   ["PCAR","HON","BKR","FSLR","CEG","CSX","FAST"],
+    "Other":                  ["MNST","KDP","MDLZ","PEP","CHTR","CMCSA","EA"],
 }
 
-# ─── EVENT → SECTOR MAPPING ──────────────────────────────────────────────────
 EVENT_SECTORS = {
-    "Non-Farm Payrolls":         ["Technology","Consumer Discretionary","Financials","Communication"],
-    "Nonfarm Payrolls":          ["Technology","Consumer Discretionary","Financials"],
-    "Unemployment":              ["Technology","Consumer Discretionary","Financials"],
-    "CPI":                       ["Technology","Communication","Consumer Discretionary"],
-    "Inflation":                 ["Technology","Communication","Consumer Discretionary"],
-    "PPI":                       ["Technology","Consumer Discretionary","Industrials"],
-    "PCE":                       ["Technology","Communication","Consumer Discretionary"],
-    "GDP":                       ["Technology","Consumer Discretionary","Industrials","Materials"],
-    "Retail Sales":              ["Consumer Discretionary","Technology","Financials"],
-    "ISM Manufacturing":         ["Industrials","Materials","Technology"],
-    "ISM Services":              ["Financials","Consumer Discretionary","Technology"],
-    "PMI":                       ["Technology","Industrials","Materials"],
-    "Consumer Confidence":       ["Consumer Discretionary","Financials","Technology"],
-    "Consumer Sentiment":        ["Consumer Discretionary","Financials"],
-    "Jobless Claims":            ["Technology","Consumer Discretionary","Financials"],
-    "Initial Claims":            ["Technology","Consumer Discretionary"],
-    "Durable Goods":             ["Industrials","Technology"],
-    "Housing Starts":            ["Materials","Industrials","Real Estate"],
-    "Existing Home Sales":       ["Real Estate","Financials","Materials"],
-    "New Home Sales":            ["Real Estate","Materials","Industrials"],
-    "Trade Balance":             ["Technology","Industrials","Financials"],
-    "FOMC":                      ["Technology","Communication","Consumer Discretionary"],
-    "Fed":                       ["Technology","Communication","Financials"],
-    "Crude Oil":                 ["Energy"],
-    "Oil":                       ["Energy"],
-    "ADP":                       ["Technology","Financials","Consumer Discretionary"],
+    "Non-Farm Payrolls":      ["Technology","Consumer Discretionary","Financials"],
+    "Nonfarm Payrolls":       ["Technology","Consumer Discretionary","Financials"],
+    "Unemployment":           ["Technology","Consumer Discretionary","Financials"],
+    "CPI":                    ["Technology","Communication","Consumer Discretionary"],
+    "Inflation":              ["Technology","Communication","Consumer Discretionary"],
+    "PPI":                    ["Technology","Consumer Discretionary","Industrials"],
+    "PCE":                    ["Technology","Communication","Consumer Discretionary"],
+    "GDP":                    ["Technology","Consumer Discretionary","Industrials","Materials"],
+    "Retail Sales":           ["Consumer Discretionary","Technology","Financials"],
+    "ISM Manufacturing":      ["Industrials","Materials","Technology"],
+    "ISM Services":           ["Financials","Consumer Discretionary","Technology"],
+    "PMI":                    ["Technology","Industrials","Materials"],
+    "Consumer Confidence":    ["Consumer Discretionary","Financials","Technology"],
+    "Consumer Sentiment":     ["Consumer Discretionary","Financials"],
+    "Jobless Claims":         ["Technology","Consumer Discretionary","Financials"],
+    "Initial Claims":         ["Technology","Consumer Discretionary"],
+    "Durable Goods":          ["Industrials","Technology"],
+    "Housing Starts":         ["Materials","Industrials"],
+    "Trade Balance":          ["Technology","Industrials"],
+    "FOMC":                   ["Technology","Communication","Consumer Discretionary"],
+    "Fed":                    ["Technology","Communication","Financials"],
+    "Crude Oil":              ["Energy"],
+    "ADP":                    ["Technology","Financials","Consumer Discretionary"],
 }
 
-# Events where LOWER actual vs forecast = bullish for stocks
-INVERSE_EVENTS = {
-    "cpi","inflation","ppi","pce","unemployment","jobless claims",
-    "initial claims","crude oil inventories","inventory"
-}
+INVERSE_EVENTS = {"cpi","inflation","ppi","pce","unemployment","jobless claims",
+                  "initial claims","crude oil inventories","inventory"}
 
-# ─── SCRAPER: TRADING ECONOMICS ──────────────────────────────────────────────
+# ─── DATA FETCHING ────────────────────────────────────────────────────────────
 def scrape_calendar():
-    """Fetch today's USD economic events from Trading Economics."""
-    events = []
     try:
-        url  = "https://tradingeconomics.com/united-states/calendar"
-        resp = requests.get(url, headers=HEADERS, timeout=20)
+        resp = requests.get("https://tradingeconomics.com/united-states/calendar",
+                            headers=HEADERS, timeout=20)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, "lxml")
-
-        rows = soup.select("tr[data-url], tr.calendar-item, table#calendar tbody tr")
-        if not rows:
-            rows = soup.select("tr")
-
-        for row in rows:
+        events, seen = [], set()
+        for row in soup.select("tr"):
             cells = row.find_all("td")
-            if len(cells) < 3:
-                continue
-
-            text_vals = [c.get_text(strip=True) for c in cells]
-
-            # Skip rows that don't look like event rows
-            if not any(text_vals):
-                continue
-
-            # Try to extract fields by position or data attributes
-            event_name = (row.get("data-event") or
-                          row.get("data-symbol") or
-                          (cells[2].get_text(strip=True) if len(cells) > 2 else ""))
-
-            if not event_name or len(event_name) < 3:
-                continue
-
-            # Time (first cell usually)
-            time_str = cells[0].get_text(strip=True) if cells else ""
-
-            # Impact — look for color classes or data attrs
+            if len(cells) < 3: continue
+            name = (row.get("data-event") or row.get("data-symbol") or
+                    cells[2].get_text(strip=True) if len(cells) > 2 else "")
+            if not name or len(name) < 3 or name in seen: continue
+            seen.add(name)
             impact = "Medium"
-            imp_el = row.find(class_=lambda c: c and any(
-                x in c.lower() for x in ["high","medium","low","red","orange","yellow"]))
-            if imp_el:
-                cls_str = " ".join(imp_el.get("class", []))
-                if any(x in cls_str.lower() for x in ["high","red","danger"]):
-                    impact = "High"
-                elif any(x in cls_str.lower() for x in ["medium","orange","warning"]):
+            for el in row.find_all(True):
+                cls = " ".join(el.get("class", []))
+                if any(x in cls.lower() for x in ["high","red","danger"]):
+                    impact = "High"; break
+                elif any(x in cls.lower() for x in ["medium","orange","warning"]):
                     impact = "Medium"
-                else:
-                    impact = "Low"
-
-            # Actual / Forecast / Previous — last 3 numeric-looking cells
-            actual   = row.get("data-actual","")   or (cells[-3].get_text(strip=True) if len(cells) >= 3 else "")
-            forecast = row.get("data-forecast","") or (cells[-2].get_text(strip=True) if len(cells) >= 2 else "")
-            previous = row.get("data-previous","") or (cells[-1].get_text(strip=True) if len(cells) >= 1 else "")
-
             events.append({
-                "time":     time_str,
-                "event":    event_name,
+                "time":     cells[0].get_text(strip=True) if cells else "",
+                "event":    name,
                 "impact":   impact,
-                "actual":   actual,
-                "forecast": forecast,
-                "previous": previous,
+                "actual":   row.get("data-actual","")   or (cells[-3].get_text(strip=True) if len(cells)>=3 else ""),
+                "forecast": row.get("data-forecast","") or (cells[-2].get_text(strip=True) if len(cells)>=2 else ""),
+                "previous": row.get("data-previous","") or (cells[-1].get_text(strip=True) if len(cells)>=1 else ""),
             })
-
-        print(f"    Trading Economics: {len(events)} events parsed")
+        return events
     except Exception as e:
-        print(f"    Scrape failed ({e}), using news-only mode")
-
-    return events
-
-
-def scrape_calendar_fallback():
-    """Backup: fetch generic economic news from Yahoo Finance."""
-    headlines = []
-    for sym in ["^GSPC", "^NDX", "SPY", "QQQ", "^VIX", "TLT", "GLD"]:
-        try:
-            for n in (yf.Ticker(sym).news or [])[:3]:
-                t = n.get("content", {}).get("title") or n.get("title", "")
-                if t and t not in headlines:
-                    headlines.append(t)
-        except:
-            pass
-    return headlines[:10]
-
-
-# ─── SENTIMENT ANALYSIS ──────────────────────────────────────────────────────
-def parse_num(s):
-    if not s or s in ("-", "—", ""):
-        return None
-    try:
-        cleaned = s.strip().replace(",","").replace("%","")
-        cleaned = cleaned.replace("K","e3").replace("M","e6").replace("B","e9")
-        return float(cleaned)
-    except:
-        return None
-
-
-def event_direction(ev):
-    name     = ev["event"].lower()
-    actual   = parse_num(ev["actual"])
-    forecast = parse_num(ev["forecast"])
-    if actual is None or forecast is None:
-        return "pending"
-
-    inverse = any(kw in name for kw in INVERSE_EVENTS)
-    beat    = (actual < forecast) if inverse else (actual > forecast)
-    diff    = abs(actual - forecast) / (abs(forecast) + 1e-9) * 100
-
-    if diff < 0.3:
-        return "neutral"
-    return "bullish" if beat else "bearish"
-
-
-def get_sentiment(events):
-    weight  = {"High": 3, "Medium": 1, "Low": 0}
-    bull, bear = 0, 0
-    bullish_sectors = set()
-    analysed = []
-
-    for ev in events:
-        d = event_direction(ev)
-        w = weight.get(ev["impact"], 1)
-        if d == "bullish":
-            bull += w
-            for kw, sects in EVENT_SECTORS.items():
-                if kw.lower() in ev["event"].lower():
-                    bullish_sectors.update(sects)
-                    break
-        elif d == "bearish":
-            bear += w
-        analysed.append({**ev, "direction": d})
-
-    net = bull - bear
-    if net >= 5:     label = "Strong Bullish  &#128640;"
-    elif net >= 2:   label = "Bullish  &#128994;"
-    elif net >= 0:   label = "Mildly Bullish  &#128308;"
-    elif net >= -2:  label = "Mixed / Cautious  &#128310;"
-    else:            label = "Bearish  &#128308;"
-
-    pending = not any(ev["actual"] for ev in events)
-    if pending:
-        label = "Pre-Events — Watch Releases  &#9203;"
-
-    if not bullish_sectors:
-        bullish_sectors = {"Technology", "Consumer Discretionary", "Communication",
-                           "Semiconductors", "Mega Cap Tech"}
-
-    return label, net, list(bullish_sectors), analysed
-
-
-# ─── STOCK SELECTION ─────────────────────────────────────────────────────────
-def score_stocks(tickers):
-    """Score stocks by pre-market move + volume + news. Long-only filter."""
-    if not tickers:
+        print(f"    Calendar scrape failed: {e}")
         return []
 
-    scored = []
-    chunk  = 40
-    all_data = {}
+def parse_num(s):
+    if not s or s in ("-","—",""): return None
+    try:
+        return float(s.strip().replace(",","").replace("%","")
+                     .replace("K","e3").replace("M","e6").replace("B","e9"))
+    except: return None
 
-    for i in range(0, len(tickers), chunk):
-        batch = tickers[i:i+chunk]
+def event_direction(ev):
+    name = ev["event"].lower()
+    a, f = parse_num(ev["actual"]), parse_num(ev["forecast"])
+    if a is None or f is None: return "pending"
+    inverse = any(kw in name for kw in INVERSE_EVENTS)
+    beat    = (a < f) if inverse else (a > f)
+    if abs(a - f) / (abs(f) + 1e-9) * 100 < 0.3: return "neutral"
+    return "bullish" if beat else "bearish"
+
+def get_sentiment(events):
+    w = {"High":3,"Medium":1,"Low":0}
+    bull = bear = 0
+    sectors = set()
+    analysed = []
+    for ev in events:
+        d = event_direction(ev)
+        wt = w.get(ev["impact"],1)
+        if d == "bullish":
+            bull += wt
+            for kw, s in EVENT_SECTORS.items():
+                if kw.lower() in ev["event"].lower():
+                    sectors.update(s); break
+        elif d == "bearish":
+            bear += wt
+        analysed.append({**ev, "direction": d})
+    net = bull - bear
+    if net >= 5:   label, emoji = "Strong Bullish", "🚀"
+    elif net >= 2: label, emoji = "Bullish",        "📈"
+    elif net >= 0: label, emoji = "Mildly Bullish", "🟡"
+    elif net >=-2: label, emoji = "Mixed",          "⚠️"
+    else:          label, emoji = "Bearish",        "📉"
+    if not any(ev["actual"] for ev in events):
+        label, emoji = "Pre-Events", "⏳"
+    if not sectors:
+        sectors = {"Technology","Consumer Discretionary","Communication",
+                   "Semiconductors","Mega Cap Tech"}
+    return label, emoji, net, list(sectors), analysed
+
+def get_market_news():
+    items = []
+    for sym in ["^GSPC","^NDX","SPY","QQQ","^VIX"]:
+        try:
+            for n in (yf.Ticker(sym).news or [])[:3]:
+                t = n.get("content",{}).get("title") or n.get("title","")
+                if t and t not in items: items.append(t)
+        except: pass
+    return items[:8]
+
+def index_snapshot():
+    snap = {}
+    for label, sym in [("S&P 500","^GSPC"),("Nasdaq 100","^NDX"),("VIX","^VIX"),("Dow Jones","^DJI")]:
+        try:
+            fi = yf.Ticker(sym).fast_info
+            snap[label] = {"price": round(fi.last_price,2),
+                           "chg":   round((fi.last_price-fi.previous_close)/fi.previous_close*100,2)}
+        except: snap[label] = None
+    return snap
+
+def score_stocks(tickers):
+    if not tickers: return []
+    all_data = {}
+    for i in range(0, len(tickers), 40):
+        batch = tickers[i:i+40]
         try:
             raw = yf.download(batch, period="5d", interval="1d",
                               auto_adjust=True, progress=False,
                               group_by="ticker", threads=True)
             for tk in batch:
                 try:
-                    df = raw[tk] if len(batch) > 1 else raw
-                    all_data[tk] = df.dropna() if df is not None else None
-                except:
-                    all_data[tk] = None
-        except:
-            pass
+                    all_data[tk] = (raw[tk] if len(batch)>1 else raw).dropna()
+                except: all_data[tk] = None
+        except: pass
 
+    scored = []
     for tk in tickers:
         try:
             df = all_data.get(tk)
             price = day_chg = vol_ratio = 0.0
-
             if df is not None and len(df) >= 2:
                 price    = float(df["Close"].iloc[-1])
                 prev     = float(df["Close"].iloc[-2])
                 day_chg  = (price - prev) / prev * 100
-                vol      = float(df["Volume"].iloc[-1])
-                avg_vol  = float(df["Volume"].mean()) + 1
-                vol_ratio = vol / avg_vol
-
-            # Pre-market quote
+                vol_ratio = float(df["Volume"].iloc[-1]) / (float(df["Volume"].mean()) + 1)
             pre_chg = 0.0
             try:
                 fi = yf.Ticker(tk).fast_info
-                if hasattr(fi, "last_price") and hasattr(fi, "previous_close") and fi.previous_close:
+                if hasattr(fi,"last_price") and fi.previous_close:
                     pre_chg = (fi.last_price - fi.previous_close) / fi.previous_close * 100
-            except:
-                pass
-
-            # Long-only filter: skip stocks with pre-market gap down > 1%
-            if pre_chg < -1.0 and day_chg < -1.0:
-                continue
-
-            # News
-            headlines = []
-            news_score = 0
+            except: pass
+            if pre_chg < -1.5 and day_chg < -1.0: continue
+            headlines, news_score = [], 0
             try:
                 for n in (yf.Ticker(tk).news or [])[:3]:
-                    t = n.get("content", {}).get("title") or n.get("title", "")
+                    t = n.get("content",{}).get("title") or n.get("title","")
                     if t:
                         headlines.append(t)
                         hl = t.lower()
-                        pos = ["beat","surge","rise","rally","upgrade","buy","strong",
-                               "record","growth","profit","expands","wins","soars"]
-                        neg = ["miss","fall","drop","downgrade","sell","loss","weak",
-                               "cuts","warning","concern","halt","suspend","fraud"]
+                        pos = ["beat","surge","rise","rally","upgrade","buy","strong","record","growth","profit"]
+                        neg = ["miss","fall","drop","downgrade","sell","loss","weak","cuts","warning","fraud"]
                         if any(w in hl for w in pos): news_score += 4
                         if any(w in hl for w in neg): news_score -= 5
-            except:
-                pass
-
-            # Skip if heavy negative news
-            if news_score <= -5:
-                continue
-
-            score = (pre_chg * 3) + (day_chg * 1.5) + ((vol_ratio - 1) * 3) + news_score
-
-            scored.append({
-                "ticker":    tk,
-                "score":     round(score, 2),
-                "price":     round(price, 2),
-                "pre_chg":   round(pre_chg, 2),
-                "day_chg":   round(day_chg, 2),
-                "vol_ratio": round(vol_ratio, 2),
-                "news":      headlines,
-            })
-        except:
-            pass
-
+            except: pass
+            if news_score <= -5: continue
+            score = pre_chg*3 + day_chg*1.5 + (vol_ratio-1)*3 + news_score
+            scored.append({"ticker":tk,"score":round(score,2),"price":round(price,2),
+                           "pre_chg":round(pre_chg,2),"day_chg":round(day_chg,2),
+                           "vol_ratio":round(vol_ratio,2),"news":headlines})
+        except: pass
     scored.sort(key=lambda x: x["score"], reverse=True)
     return scored
 
+def pick_stocks(sectors):
+    sp_c, nd_c = [], []
+    for s in sectors:
+        sp_c.extend(SP500_SECTORS.get(s,[]))
+        nd_c.extend(NDX_SECTORS.get(s,[]))
+    for s in ["Technology","Consumer Discretionary","Communication"]:
+        sp_c.extend(SP500_SECTORS.get(s,[]))
+    for s in ["Mega Cap Tech","Semiconductors","Software / Cloud"]:
+        nd_c.extend(NDX_SECTORS.get(s,[]))
+    sp_c = list(dict.fromkeys(sp_c))[:100]
+    nd_c = list(dict.fromkeys(nd_c))[:80]
+    print(f"    Scoring {len(sp_c)} S&P candidates...")
+    print(f"    Scoring {len(nd_c)} NDX candidates...")
+    return score_stocks(sp_c)[:TOP_N], score_stocks(nd_c)[:TOP_N]
 
-def pick_stocks(bullish_sectors):
-    """Build candidate lists from bullish sectors and score them."""
-    sp500_cands, ndx_cands = [], []
+# ─── FULL REPORT HTML (GitHub Pages) ─────────────────────────────────────────
+def build_full_report(events, sentiment, emoji, net, sectors, analysed,
+                      sp_picks, ndx_picks, news, snap):
+    today    = datetime.now().strftime("%A, %B %d, %Y")
+    time_str = datetime.now().strftime("%I:%M %p ET")
 
-    for sector in bullish_sectors:
-        sp500_cands.extend(SP500_SECTORS.get(sector, []))
-        ndx_cands.extend(NDX_SECTORS.get(sector, []))
+    sent_colors = {
+        "Strong Bullish": ("#00d4a1","#003d2e"),
+        "Bullish":        ("#3fb950","#0d2b17"),
+        "Mildly Bullish": ("#d29922","#2d2208"),
+        "Mixed":          ("#f0883e","#2d1600"),
+        "Pre-Events":     ("#58a6ff","#0d1e3d"),
+        "Bearish":        ("#f85149","#2d0f0e"),
+    }
+    sc, sbg = sent_colors.get(sentiment, ("#58a6ff","#0d1e3d"))
 
-    # Always include core tech + mega caps
-    for sec in ["Technology", "Consumer Discretionary", "Communication"]:
-        sp500_cands.extend(SP500_SECTORS.get(sec, []))
-    for sec in ["Mega Cap Tech", "Semiconductors", "Software / Cloud"]:
-        ndx_cands.extend(NDX_SECTORS.get(sec, []))
-
-    sp500_cands = list(dict.fromkeys(sp500_cands))[:100]
-    ndx_cands   = list(dict.fromkeys(ndx_cands))[:80]
-
-    print(f"    Scoring {len(sp500_cands)} S&P 500 candidates...")
-    sp500_scored = score_stocks(sp500_cands)
-
-    print(f"    Scoring {len(ndx_cands)} NDX candidates...")
-    ndx_scored = score_stocks(ndx_cands)
-
-    return sp500_scored[:TOP_N], ndx_scored[:TOP_N]
-
-
-# ─── REPORT BUILDER ──────────────────────────────────────────────────────────
-def index_snapshot():
-    snap = {}
-    for label, sym in [("S&P 500","^GSPC"),("NDX 100","^NDX"),("VIX","^VIX"),("Dow","^DJI")]:
-        try:
-            fi = yf.Ticker(sym).fast_info
-            snap[label] = {
-                "price": round(fi.last_price, 2),
-                "chg":   round((fi.last_price - fi.previous_close) / fi.previous_close * 100, 2),
-            }
-        except:
-            snap[label] = None
-    return snap
-
-
-def build_html(events, sentiment, net, bullish_sectors, analysed,
-               sp500_picks, ndx_picks, mkt_news, snap):
-
-    today = datetime.now().strftime("%A, %B %d, %Y")
-    time_ = datetime.now().strftime("%I:%M %p ET")
-
-    sent_col = ("#3fb950" if "Bullish" in sentiment or "Mildly" in sentiment
-                else "#f0883e" if "Mixed" in sentiment or "Pre-Events" in sentiment
-                else "#f85149")
-
-    # ── Snapshot ──
-    snap_cells = ""
-    for lbl, d in snap.items():
-        if not d: continue
-        col = "#3fb950" if d["chg"] >= 0 else "#f85149"
+    # ── Index cards ──
+    def idx_card(label, d):
+        if not d: return ""
+        col   = "#00d4a1" if d["chg"] >= 0 else "#f85149"
         arrow = "▲" if d["chg"] >= 0 else "▼"
-        snap_cells += (f"<td style='padding:4px 20px 4px 0'><b>{lbl}</b></td>"
-                       f"<td style='padding:4px 16px 4px 0'>{d['price']:,.2f}</td>"
-                       f"<td style='color:{col};padding:4px 20px 4px 0'>{arrow} {d['chg']:+.2f}%</td>")
+        bg    = "rgba(0,212,161,0.06)" if d["chg"] >= 0 else "rgba(248,81,73,0.06)"
+        return f"""<div class="idx-card" style="background:{bg};border-color:{col}30">
+          <div class="idx-label">{label}</div>
+          <div class="idx-price">{d['price']:,.2f}</div>
+          <div class="idx-chg" style="color:{col}">{arrow} {d['chg']:+.2f}%</div>
+        </div>"""
+    idx_cards = "".join(idx_card(l,d) for l,d in snap.items())
 
     # ── Calendar rows ──
-    impact_col = {"High":"#da3633","Medium":"#f0883e","Low":"#388bfd"}
-
-    def dir_badge(d):
-        if d == "bullish":  return "<span style='color:#3fb950'>▲ Bullish</span>"
-        if d == "bearish":  return "<span style='color:#f85149'>▼ Bearish</span>"
-        if d == "pending":  return "<span style='color:#8b949e'>⏳ Pending</span>"
-        return "<span style='color:#8b949e'>— Neutral</span>"
+    impact_style = {
+        "High":   ("🔴","#da3633","rgba(218,54,51,0.15)"),
+        "Medium": ("🟡","#d29922","rgba(210,153,34,0.12)"),
+        "Low":    ("🔵","#388bfd","rgba(56,139,253,0.10)"),
+    }
+    def dir_pill(d):
+        pills = {
+            "bullish": ("<span class='pill pill-bull'>▲ Bullish</span>"),
+            "bearish": ("<span class='pill pill-bear'>▼ Bearish</span>"),
+            "pending": ("<span class='pill pill-pend'>⏳ Pending</span>"),
+            "neutral": ("<span class='pill pill-neut'>— Neutral</span>"),
+        }
+        return pills.get(d,"")
 
     cal_rows = ""
-    shown = sorted(analysed, key=lambda x: x["impact"]=="High", reverse=True)[:15]
+    shown = sorted(analysed, key=lambda x: x["impact"]=="High", reverse=True)[:12]
     for ev in shown:
-        ic = impact_col.get(ev["impact"],"#555")
-        cal_rows += f"""<tr>
-          <td style='color:#8b949e;white-space:nowrap'>{ev['time']}</td>
-          <td style='font-weight:500'>{ev['event']}</td>
-          <td><span style='background:{ic};color:#fff;padding:1px 7px;border-radius:10px;font-size:0.75em'>{ev['impact']}</span></td>
-          <td style='font-weight:bold;color:#e6edf3'>{ev['actual'] or '<span style=\"color:#8b949e\">Pending</span>'}</td>
-          <td style='color:#8b949e'>{ev['forecast'] or '—'}</td>
-          <td style='color:#8b949e'>{ev['previous'] or '—'}</td>
-          <td>{dir_badge(ev['direction'])}</td>
+        dot, ic, ibg = impact_style.get(ev["impact"],("⚪","#555","rgba(0,0,0,0)"))
+        a_col = "#00d4a1" if ev["direction"]=="bullish" else ("#f85149" if ev["direction"]=="bearish" else "#8b949e")
+        cal_rows += f"""<tr class="cal-row">
+          <td class="cal-time">{ev['time']}</td>
+          <td class="cal-event">{ev['event']}</td>
+          <td><span class="impact-badge" style="color:{ic};background:{ibg};border:1px solid {ic}40">{dot} {ev['impact']}</span></td>
+          <td class="cal-actual" style="color:{a_col}">{ev['actual'] if ev['actual'] else '<span class="muted">Pending</span>'}</td>
+          <td class="muted">{ev['forecast'] or '—'}</td>
+          <td class="muted">{ev['previous'] or '—'}</td>
+          <td>{dir_pill(ev['direction'])}</td>
         </tr>"""
 
-    no_cal = not cal_rows
-    if no_cal:
-        cal_rows = "<tr><td colspan='7' style='text-align:center;color:#8b949e;padding:14px'>No USD events today — news-driven selection mode</td></tr>"
+    if not cal_rows:
+        cal_rows = "<tr><td colspan='7' class='muted' style='text-align:center;padding:20px'>No USD events today</td></tr>"
 
-    # ── Sector badges ──
-    sector_badges = "".join(
-        f"<span style='background:#1f6feb;color:#fff;padding:2px 9px;border-radius:12px;"
-        f"font-size:0.78em;margin:2px;display:inline-block'>{s}</span>"
-        for s in bullish_sectors[:8])
+    # ── Sector tags ──
+    sector_tags = "".join(
+        f"<span class='sector-tag'>{s}</span>" for s in sectors[:8])
 
-    # ── News headlines ──
-    news_li = "".join(f"<li>{n}</li>" for n in mkt_news[:8]) or "<li>No headlines available</li>"
+    # ── News list ──
+    news_items = "".join(f"<li>{n}</li>" for n in news[:8])
 
-    # ── Pending warning ──
-    pending_banner = ""
-    if any(ev["direction"] == "pending" for ev in analysed):
-        pending_banner = """<div style='background:#162032;border-left:3px solid #388bfd;
-          padding:10px 16px;margin:10px 0;border-radius:4px;font-size:0.9em'>
-          <b>⚠ High-impact events releasing today.</b>
-          Stocks below are pre-positioned assuming a bullish release.
-          If data disappoints, skip or wait 5–10 min after release before entering.
-        </div>"""
-
-    # ── Stock cards ──
-    def make_cards(picks, title):
+    # ── Stock pick cards ──
+    def stock_cards(picks, title, accent):
         if not picks:
-            return f"<h2>{title}</h2><p style='color:#8b949e'>No strong long candidates today.</p>"
+            return f"<h2 class='section-title'>{title}</h2><p class='muted'>No strong candidates today.</p>"
 
         cards = ""
         for i, p in enumerate(picks):
             rank   = i + 1
-            border = "#3fb950" if rank <= 3 else "#30363d"
-            pc_col = "#3fb950" if p["pre_chg"] >= 0 else "#f85149"
-            dc_col = "#3fb950" if p["day_chg"] >= 0 else "#f85149"
+            top3   = rank <= 3
+            pc_col = "#00d4a1" if p["pre_chg"] >= 0 else "#f85149"
+            dc_col = "#00d4a1" if p["day_chg"] >= 0 else "#f85149"
+            border = accent if top3 else "#1e1e2e"
+            glow   = f"box-shadow:0 0 20px {accent}22;" if top3 else ""
+            rank_bg = accent if top3 else "#1e1e2e"
 
             reasons = []
-            if abs(p["pre_chg"]) > 0.2:
-                reasons.append(f"Pre-mkt {'▲' if p['pre_chg']>0 else '▼'} {p['pre_chg']:+.2f}%")
-            if p["vol_ratio"] > 1.4:
-                reasons.append(f"Volume {p['vol_ratio']:.1f}× avg")
-            if p["news"]:
-                reasons.append("News catalyst")
-            if not reasons:
-                reasons.append("Sector macro tailwind")
-            why = "  ·  ".join(reasons)
+            if abs(p["pre_chg"]) > 0.15: reasons.append(f"Pre-mkt {'▲' if p['pre_chg']>0 else '▼'} {abs(p['pre_chg']):.2f}%")
+            if p["vol_ratio"] > 1.4:     reasons.append(f"Vol {p['vol_ratio']:.1f}× avg")
+            if p["news"]:                reasons.append("News catalyst")
+            if not reasons:              reasons.append("Macro tailwind")
 
             news_html = ""
-            for n in p["news"][:2]:
-                news_html += (f"<div style='font-size:0.78em;color:#8b949e;border-left:2px solid #30363d;"
-                              f"padding-left:8px;margin:3px 0'>▸ {n[:115]}</div>")
+            for n in p["news"][:1]:
+                news_html += f'<div class="news-line">▸ {n[:100]}</div>'
 
-            cards += f"""
-<div style='background:#161b22;border:1px solid {border};border-radius:8px;padding:15px;'>
-  <div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:4px'>
-    <span style='font-size:1.3em;font-weight:bold;color:#3fb950'>#{rank} {p['ticker']}</span>
-    <span style='font-size:0.88em'>Pre-mkt <b style='color:{pc_col}'>{p['pre_chg']:+.2f}%</b></span>
-  </div>
-  <div style='color:#8b949e;font-size:0.83em;margin-bottom:6px'>
-    ${p['price']} &nbsp;|&nbsp; Yesterday <span style='color:{dc_col}'>{p['day_chg']:+.2f}%</span>
-    &nbsp;|&nbsp; Vol {p['vol_ratio']:.1f}×
-  </div>
-  <div style='font-size:0.83em;color:#adbac7;margin-bottom:5px'>📈 {why}</div>
-  <div style='font-size:0.82em;color:#3fb950;margin-bottom:6px'>
-    → Wait for EMA 9 cross above EMA 21 on 5m or 10m · Trailing stop 1.5%
-  </div>
-  {news_html}
-</div>"""
+            cards += f"""<div class="stock-card" style="border-color:{border};{glow}">
+              <div class="card-top">
+                <div class="rank-badge" style="background:{rank_bg}">#{rank}</div>
+                <div class="card-ticker">{p['ticker']}</div>
+                <div class="card-premkt" style="color:{pc_col}">{p['pre_chg']:+.2f}%<span class="card-premkt-label"> pre</span></div>
+              </div>
+              <div class="card-price">${p['price']:,.2f} &nbsp;·&nbsp;
+                <span style="color:{dc_col}">{p['day_chg']:+.2f}% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol {p['vol_ratio']:.1f}×</span>
+              </div>
+              <div class="card-reasons">{'  ·  '.join(reasons)}</div>
+              {news_html}
+              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
+            </div>"""
+        return f"""<div class="picks-section">
+          <h2 class="section-title">{title}</h2>
+          <div class="picks-grid">{cards}</div>
+        </div>"""
 
-        return (f"<h2>{title}</h2>"
-                f"<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:12px'>"
-                f"{cards}</div>")
+    sp_html  = stock_cards(sp_picks,  "S&amp;P 500 — Top 10 Long Candidates", "#58a6ff")
+    ndx_html = stock_cards(ndx_picks, "Nasdaq 100 — Top 10 Long Candidates",  "#a371f7")
 
-    sp500_html = make_cards(sp500_picks, f"S&amp;P 500 — Top {TOP_N} Long Candidates")
-    ndx_html   = make_cards(ndx_picks,   f"Nasdaq 100 — Top {TOP_N} Long Candidates")
+    # ── Pending banner ──
+    pending_html = ""
+    if any(e["direction"]=="pending" for e in analysed):
+        pending_html = """<div class="pending-banner">
+          ⚠️ <strong>Events releasing today</strong> — picks below assume a bullish outcome.
+          If data disappoints, wait 5–10 min after release before entering.
+        </div>"""
 
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="refresh" content="300">
 <title>Market Report — {today}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
-  *   {{ box-sizing:border-box; margin:0; padding:0 }}
-  body{{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-         background:#0d1117;color:#e6edf3;padding:24px;line-height:1.6 }}
-  h1  {{ color:#58a6ff;font-size:1.5em;border-bottom:1px solid #30363d;
-         padding-bottom:10px;margin-bottom:14px }}
-  h2  {{ color:#79c0ff;font-size:1.1em;margin:28px 0 12px }}
-  table {{ width:100%;border-collapse:collapse;font-size:0.87em }}
-  th  {{ background:#161b22;color:#8b949e;padding:7px 10px;text-align:left;
-         border-bottom:1px solid #30363d }}
-  td  {{ padding:7px 10px;border-bottom:1px solid #21262d;vertical-align:middle }}
-  .box{{ background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px 18px }}
-  .ctx{{ background:#161b22;border-left:3px solid #388bfd;
-         padding:12px 16px;border-radius:4px;margin-bottom:12px }}
-  .risk{{background:#161b22;border-left:3px solid #f0883e;
-          padding:12px 16px;border-radius:4px }}
-  ul  {{ padding-left:20px;color:#adbac7;font-size:0.9em }}
-  li  {{ margin:4px 0 }}
-  footer{{ color:#6e7681;font-size:0.75em;margin-top:40px;
-            border-top:1px solid #21262d;padding-top:12px }}
+:root{{
+  --bg:       #080b14;
+  --surface:  #0d1117;
+  --card:     #111827;
+  --border:   #1e1e2e;
+  --border2:  #2d2d3d;
+  --text:     #e2e8f0;
+  --muted:    #64748b;
+  --bull:     #00d4a1;
+  --bear:     #f85149;
+  --blue:     #58a6ff;
+  --purple:   #a371f7;
+  --gold:     #fbbf24;
+}}
+*{{box-sizing:border-box;margin:0;padding:0}}
+body{{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);
+      min-height:100vh;line-height:1.6;font-size:14px}}
+/* ── HEADER ── */
+.header{{background:linear-gradient(135deg,#0d1117 0%,#111827 50%,#0d1117 100%);
+         border-bottom:1px solid var(--border);padding:28px 32px 24px;
+         display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}}
+.header-left h1{{font-size:1.5em;font-weight:800;color:#fff;letter-spacing:-0.5px}}
+.header-left .subtitle{{color:var(--muted);font-size:0.82em;margin-top:3px}}
+.sent-badge{{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;
+             border-radius:50px;font-weight:700;font-size:1em;letter-spacing:0.3px;
+             background:{sbg};color:{sc};border:1px solid {sc}40}}
+/* ── MAIN ── */
+.main{{max-width:1400px;margin:0 auto;padding:24px 32px}}
+/* ── INDEX BAR ── */
+.idx-bar{{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px}}
+.idx-card{{background:var(--card);border:1px solid var(--border);border-radius:12px;
+           padding:16px 20px;transition:transform 0.2s}}
+.idx-card:hover{{transform:translateY(-2px)}}
+.idx-label{{font-size:0.75em;color:var(--muted);font-weight:600;text-transform:uppercase;
+            letter-spacing:0.8px;margin-bottom:6px}}
+.idx-price{{font-family:'JetBrains Mono',monospace;font-size:1.25em;font-weight:600;
+            color:#fff;margin-bottom:3px}}
+.idx-chg{{font-family:'JetBrains Mono',monospace;font-size:0.88em;font-weight:600}}
+/* ── SECTIONS ── */
+.section{{background:var(--card);border:1px solid var(--border);border-radius:14px;
+          padding:24px;margin-bottom:20px}}
+.section-title{{font-size:1.05em;font-weight:700;color:#fff;margin-bottom:16px;
+                display:flex;align-items:center;gap:8px}}
+.section-title::before{{content:'';display:inline-block;width:3px;height:18px;
+                         border-radius:2px;background:var(--blue)}}
+/* ── CALENDAR ── */
+table{{width:100%;border-collapse:collapse}}
+.cal-row{{border-bottom:1px solid var(--border)}}
+.cal-row:last-child{{border-bottom:none}}
+.cal-row:hover{{background:rgba(255,255,255,0.02)}}
+th{{font-size:0.72em;font-weight:600;color:var(--muted);text-transform:uppercase;
+    letter-spacing:0.7px;padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)}}
+td{{padding:11px 10px;vertical-align:middle}}
+.cal-time{{font-family:'JetBrains Mono',monospace;font-size:0.8em;color:var(--muted);white-space:nowrap}}
+.cal-event{{font-weight:500;color:var(--text)}}
+.cal-actual{{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.95em}}
+.impact-badge{{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;
+               border-radius:20px;font-size:0.72em;font-weight:600;white-space:nowrap}}
+.pill{{display:inline-block;padding:2px 10px;border-radius:20px;font-size:0.75em;font-weight:600}}
+.pill-bull{{background:rgba(0,212,161,0.15);color:var(--bull)}}
+.pill-bear{{background:rgba(248,81,73,0.15);color:var(--bear)}}
+.pill-pend{{background:rgba(88,166,255,0.12);color:var(--blue)}}
+.pill-neut{{background:rgba(100,116,139,0.15);color:var(--muted)}}
+/* ── SENTIMENT ── */
+.sentiment-row{{display:flex;align-items:center;gap:16px;flex-wrap:wrap}}
+.sent-score{{font-family:'JetBrains Mono',monospace;font-size:0.85em;color:var(--muted);margin-top:8px}}
+.sector-tag{{display:inline-block;background:rgba(88,166,255,0.1);color:var(--blue);
+             border:1px solid rgba(88,166,255,0.25);padding:3px 11px;border-radius:20px;
+             font-size:0.78em;font-weight:500;margin:3px}}
+.sectors-wrap{{margin-top:10px}}
+/* ── NEWS ── */
+.news-list{{list-style:none;padding:0}}
+.news-list li{{padding:8px 0;border-bottom:1px solid var(--border);font-size:0.88em;
+               color:#94a3b8;display:flex;gap:10px}}
+.news-list li::before{{content:'▸';color:var(--blue);flex-shrink:0}}
+.news-list li:last-child{{border-bottom:none}}
+/* ── PICKS ── */
+.picks-section{{margin-bottom:20px}}
+.picks-grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}}
+.stock-card{{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+             padding:16px;transition:transform 0.15s,box-shadow 0.15s}}
+.stock-card:hover{{transform:translateY(-2px)}}
+.card-top{{display:flex;align-items:center;gap:10px;margin-bottom:8px}}
+.rank-badge{{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;
+             justify-content:center;font-size:0.75em;font-weight:800;color:#fff;flex-shrink:0}}
+.card-ticker{{font-size:1.3em;font-weight:800;color:#fff;flex:1}}
+.card-premkt{{font-family:'JetBrains Mono',monospace;font-size:1.05em;font-weight:700;text-align:right}}
+.card-premkt-label{{font-size:0.65em;color:var(--muted);font-weight:400}}
+.card-price{{font-family:'JetBrains Mono',monospace;font-size:0.8em;color:var(--muted);margin-bottom:7px}}
+.card-reasons{{font-size:0.8em;color:#94a3b8;margin-bottom:5px}}
+.news-line{{font-size:0.76em;color:var(--muted);border-left:2px solid var(--border2);
+            padding-left:8px;margin:4px 0;line-height:1.4}}
+.card-strategy{{font-size:0.73em;color:rgba(0,212,161,0.7);margin-top:8px;
+                padding-top:7px;border-top:1px solid var(--border)}}
+/* ── PENDING BANNER ── */
+.pending-banner{{background:rgba(88,166,255,0.08);border:1px solid rgba(88,166,255,0.25);
+                 border-radius:10px;padding:12px 16px;font-size:0.87em;color:#93c5fd;margin-bottom:16px}}
+/* ── TRADING RULES ── */
+.rules-grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}}
+.rule-item{{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+            padding:12px 14px;font-size:0.83em;color:#94a3b8;display:flex;gap:10px}}
+.rule-icon{{font-size:1.1em;flex-shrink:0}}
+/* ── FOOTER ── */
+.footer{{text-align:center;color:var(--muted);font-size:0.75em;padding:24px 32px;
+         border-top:1px solid var(--border);margin-top:8px}}
+.muted{{color:var(--muted)}}
+/* ── RESPONSIVE ── */
+@media(max-width:768px){{
+  .header{{padding:20px 16px}}
+  .main{{padding:16px}}
+  .idx-bar{{grid-template-columns:repeat(2,1fr)}}
+  .picks-grid{{grid-template-columns:1fr}}
+  .rules-grid{{grid-template-columns:1fr}}
+  th,td{{padding:8px 6px}}
+}}
 </style>
 </head>
 <body>
 
-<h1>🌅 Morning Market Report — {today}</h1>
-<p style='color:#8b949e;font-size:0.85em;margin-bottom:20px'>
-  {time_} &nbsp;|&nbsp; Source: Trading Economics + Yahoo Finance
-  &nbsp;|&nbsp; Strategy: EMA 9/21 · 5m / 10m · Long only · 1.5% trail stop
-</p>
-
-<h2>Index Snapshot</h2>
-<div class='box' style='display:inline-block;margin-bottom:8px'>
-  <table style='width:auto'><tr>{snap_cells}</tr></table>
-</div>
-
-<h2>US Economic Calendar</h2>
-{pending_banner}
-<div class='box' style='padding:4px'>
-  <table>
-    <tr>
-      <th>Time (ET)</th><th>Event</th><th>Impact</th>
-      <th>Actual</th><th>Forecast</th><th>Previous</th><th>Signal</th>
-    </tr>
-    {cal_rows}
-  </table>
-</div>
-
-<h2>Overall Market Sentiment</h2>
-<div class='ctx'>
-  <div style='font-size:1.25em;font-weight:bold;color:{sent_col}'>{sentiment}</div>
-  <div style='color:#8b949e;font-size:0.88em;margin:6px 0'>
-    Macro score: {net:+d} &nbsp;|&nbsp; Favoured sectors:
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <h1>🌅 Morning Market Report</h1>
+    <div class="subtitle">{today} &nbsp;·&nbsp; {time_str} &nbsp;·&nbsp; EMA 9/21 &nbsp;·&nbsp; Long Only &nbsp;·&nbsp; 1.5% Trail</div>
   </div>
-  <div style='margin-top:6px'>{sector_badges}</div>
+  <div class="sent-badge">{emoji} {sentiment}</div>
 </div>
 
-<h2>Market Headlines</h2>
-<div class='ctx'><ul>{news_li}</ul></div>
+<div class="main">
 
-{sp500_html}
+  <!-- INDEX SNAPSHOT -->
+  <div class="idx-bar">{idx_cards}</div>
 
-{ndx_html}
+  <!-- ECONOMIC CALENDAR -->
+  <div class="section">
+    <div class="section-title">US Economic Calendar</div>
+    {pending_html}
+    <table>
+      <tr>
+        <th>Time</th><th>Event</th><th>Impact</th>
+        <th>Actual</th><th>Forecast</th><th>Previous</th><th>Signal</th>
+      </tr>
+      {cal_rows}
+    </table>
+  </div>
 
-<h2>Trading Notes</h2>
-<div class='risk'>
-  <ul>
-    <li><b>Long only</b> — only enter when EMA 9 crosses above EMA 21 on the 5m or 10m chart</li>
-    <li>Let the <b>first 5-minute bar close</b> after market open before touching anything</li>
-    <li><b>1.5% trailing stop</b> on every trade — no exceptions, no manual overrides</li>
-    <li>If a ⬛ High-impact event releases during the session — wait 5–10 min after the number drops before entering</li>
-    <li>Pre-market movers with volume 1.5× or higher tend to continue the first 30–60 min — prioritise those</li>
-    <li>VIX &gt; 20 = choppier price action → tighten position size. VIX &lt; 15 = cleaner trends → normal size</li>
-  </ul>
+  <!-- SENTIMENT -->
+  <div class="section">
+    <div class="section-title">Market Sentiment</div>
+    <div class="sentiment-row">
+      <div class="sent-badge">{emoji} {sentiment}</div>
+    </div>
+    <div class="sent-score">Macro score: {net:+d} &nbsp;·&nbsp; Favoured sectors:</div>
+    <div class="sectors-wrap">{sector_tags}</div>
+  </div>
+
+  <!-- HEADLINES -->
+  <div class="section">
+    <div class="section-title">Market Headlines</div>
+    <ul class="news-list">{"".join(f"<li>{n}</li>" for n in news[:8])}</ul>
+  </div>
+
+  <!-- S&P 500 PICKS -->
+  <div class="section">
+    {sp_html}
+  </div>
+
+  <!-- NDX PICKS -->
+  <div class="section">
+    {ndx_html}
+  </div>
+
+  <!-- TRADING RULES -->
+  <div class="section">
+    <div class="section-title">Trading Rules</div>
+    <div class="rules-grid">
+      <div class="rule-item"><span class="rule-icon">📍</span><span><strong>Long only</strong> — only enter when EMA 9 crosses above EMA 21</span></div>
+      <div class="rule-item"><span class="rule-icon">⏱</span><span>Wait for the <strong>first 5-min bar to close</strong> before entering any trade</span></div>
+      <div class="rule-item"><span class="rule-icon">🛡</span><span><strong>1.5% trailing stop</strong> on every position — no exceptions</span></div>
+      <div class="rule-item"><span class="rule-icon">📰</span><span>High-impact events during session → <strong>wait 5–10 min</strong> after the release</span></div>
+      <div class="rule-item"><span class="rule-icon">📊</span><span>Pre-market movers with <strong>vol 1.5×+</strong> tend to continue first 30–60 min</span></div>
+      <div class="rule-item"><span class="rule-icon">⚡</span><span>VIX &gt; 20 = reduce size. VIX &lt; 15 = normal size, cleaner trends</span></div>
+    </div>
+  </div>
+
 </div>
 
-<footer>
-  Generated by Claude Code &nbsp;·&nbsp; Data: Trading Economics + Yahoo Finance
-  &nbsp;·&nbsp; Not financial advice.
-</footer>
+<div class="footer">
+  Auto-generated by Claude Code &nbsp;·&nbsp; Data: Trading Economics + Yahoo Finance
+  &nbsp;·&nbsp; Refreshes every 5 min &nbsp;·&nbsp; Not financial advice
+</div>
+
 </body>
 </html>"""
 
 
-# ─── EMAIL ───────────────────────────────────────────────────────────────────
+# ─── SUMMARY EMAIL ────────────────────────────────────────────────────────────
+def build_email(sentiment, emoji, sp_picks, ndx_picks, snap, net, report_url):
+    today    = datetime.now().strftime("%A, %b %d")
+    sent_col = {"Strong Bullish":"#00d4a1","Bullish":"#3fb950","Mildly Bullish":"#d29922",
+                "Mixed":"#f0883e","Pre-Events":"#58a6ff","Bearish":"#f85149"}.get(sentiment,"#58a6ff")
+
+    def snap_row(label, d):
+        if not d: return ""
+        col   = "#00d4a1" if d["chg"]>=0 else "#f85149"
+        arrow = "▲" if d["chg"]>=0 else "▼"
+        return (f"<td style='padding:8px 16px 8px 0;font-family:monospace'>"
+                f"<span style='color:#64748b;font-size:11px'>{label}</span><br>"
+                f"<strong>{d['price']:,.0f}</strong> "
+                f"<span style='color:{col}'>{arrow}{d['chg']:+.2f}%</span></td>")
+
+    def pick_rows(picks):
+        rows = ""
+        for i, p in enumerate(picks[:5]):
+            col = "#00d4a1" if p["pre_chg"]>=0 else "#f85149"
+            rows += (f"<tr><td style='padding:5px 0;color:#94a3b8;font-size:12px'>#{i+1}</td>"
+                     f"<td style='padding:5px 8px;font-weight:700;color:#fff;font-size:14px'>{p['ticker']}</td>"
+                     f"<td style='padding:5px 0;font-family:monospace;color:{col};font-size:13px'>{p['pre_chg']:+.2f}%</td>"
+                     f"<td style='padding:5px 0 5px 12px;color:#64748b;font-size:12px'>${p['price']:,.2f}</td></tr>")
+        return rows
+
+    return f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#080b14;font-family:Inter,-apple-system,sans-serif">
+<div style="max-width:600px;margin:0 auto;padding:20px">
+
+  <!-- Header -->
+  <div style="background:linear-gradient(135deg,#0d1117,#111827);border:1px solid #1e1e2e;
+              border-radius:16px;padding:28px;margin-bottom:16px;text-align:center">
+    <div style="font-size:13px;color:#64748b;margin-bottom:6px">🌅 MORNING MARKET REPORT</div>
+    <div style="font-size:22px;font-weight:800;color:#fff;margin-bottom:12px">{today}</div>
+    <div style="display:inline-block;background:rgba(0,0,0,0.3);border:1px solid {sent_col}40;
+                border-radius:50px;padding:8px 20px;font-weight:700;color:{sent_col};font-size:15px">
+      {emoji} {sentiment}
+    </div>
+  </div>
+
+  <!-- Index Snapshot -->
+  <div style="background:#0d1117;border:1px solid #1e1e2e;border-radius:12px;
+              padding:16px 20px;margin-bottom:16px">
+    <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;
+                letter-spacing:1px;margin-bottom:10px">Index Snapshot</div>
+    <table style="width:100%;border-collapse:collapse">
+      <tr>{"".join(snap_row(l,d) for l,d in snap.items())}</tr>
+    </table>
+  </div>
+
+  <!-- S&P 500 Picks -->
+  <div style="background:#0d1117;border:1px solid #1e1e2e;border-radius:12px;
+              padding:16px 20px;margin-bottom:12px">
+    <div style="font-size:11px;font-weight:600;color:#58a6ff;text-transform:uppercase;
+                letter-spacing:1px;margin-bottom:10px">S&amp;P 500 Top 5</div>
+    <table style="width:100%;border-collapse:collapse">{pick_rows(sp_picks)}</table>
+  </div>
+
+  <!-- NDX Picks -->
+  <div style="background:#0d1117;border:1px solid #1e1e2e;border-radius:12px;
+              padding:16px 20px;margin-bottom:20px">
+    <div style="font-size:11px;font-weight:600;color:#a371f7;text-transform:uppercase;
+                letter-spacing:1px;margin-bottom:10px">Nasdaq 100 Top 5</div>
+    <table style="width:100%;border-collapse:collapse">{pick_rows(ndx_picks)}</table>
+  </div>
+
+  <!-- CTA Button -->
+  <div style="text-align:center;margin-bottom:20px">
+    <a href="{report_url}" style="display:inline-block;background:linear-gradient(135deg,#1d4ed8,#7c3aed);
+       color:#fff;text-decoration:none;font-weight:700;font-size:16px;
+       padding:16px 40px;border-radius:50px;letter-spacing:0.3px">
+      📊 Open Full Report →
+    </a>
+    <div style="margin-top:10px;font-size:11px;color:#475569">
+      Full economic calendar · All 10 picks · Trading rules
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div style="text-align:center;color:#334155;font-size:11px;padding-top:12px;
+              border-top:1px solid #1e1e2e">
+    Auto-generated by Claude Code &nbsp;·&nbsp; Not financial advice
+  </div>
+
+</div></body></html>"""
+
+
+# ─── EMAIL SENDER ─────────────────────────────────────────────────────────────
 def send_email(html, subject):
-    sender    = os.environ.get("GMAIL_USER", "")
-    password  = os.environ.get("GMAIL_APP_PASSWORD", "")
-    recipient = os.environ.get("REPORT_EMAIL", "")
-    if not all([sender, password, recipient]):
-        return False
+    s = os.environ.get("GMAIL_USER","")
+    p = os.environ.get("GMAIL_APP_PASSWORD","")
+    r = os.environ.get("REPORT_EMAIL","")
+    if not all([s,p,r]): return False
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"]    = f"Market Report <{sender}>"
-    msg["To"]      = recipient
-    msg.attach(MIMEText(html, "html", "utf-8"))
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-        server.login(sender, password)
-        server.sendmail(sender, recipient, msg.as_string())
+    msg["From"]    = f"Market Report <{s}>"
+    msg["To"]      = r
+    msg.attach(MIMEText(html,"html","utf-8"))
+    with smtplib.SMTP_SSL("smtp.gmail.com",465) as srv:
+        srv.login(s,p)
+        srv.sendmail(s,r,msg.as_string())
     return True
 
 
-# ─── DST CHECK ───────────────────────────────────────────────────────────────
-def check_et_hour():
+# ─── DST CHECK ────────────────────────────────────────────────────────────────
+def check_et_time():
     try:
         from zoneinfo import ZoneInfo
-        now_et = datetime.now(ZoneInfo("America/New_York"))
-        if now_et.hour != 8 or now_et.minute < 28:
-            print(f"Not 8:30 AM ET ({now_et.strftime('%I:%M %p ET')}), skipping.")
+        now = datetime.now(ZoneInfo("America/New_York"))
+        if now.hour != 8 or now.minute < 28:
+            print(f"Not 8:30 AM ET ({now.strftime('%I:%M %p ET')}), skipping.")
             sys.exit(0)
-    except:
-        pass
+    except: pass
 
 
-# ─── MAIN ────────────────────────────────────────────────────────────────────
+# ─── MAIN ─────────────────────────────────────────────────────────────────────
 def main():
     if CLOUD_MODE:
-        check_et_hour()
+        check_et_time()
 
     print(f"\n{'='*62}")
-    print(f"  MACRO REPORT  {datetime.now().strftime('%A %B %d, %Y  %I:%M %p')}")
-    print(f"  Mode: {'CLOUD (email)' if CLOUD_MODE else 'LOCAL (browser)'}")
+    print(f"  MACRO REPORT  {datetime.now().strftime('%A %b %d, %Y  %I:%M %p')}")
+    print(f"  Mode: {'CLOUD' if CLOUD_MODE else 'LOCAL'}")
     print(f"{'='*62}")
 
     print("\n  [1/6] Index snapshot...")
@@ -632,43 +718,42 @@ def main():
     for l, d in snap.items():
         if d: print(f"    {l}: {d['price']:>10,.2f}  ({d['chg']:+.2f}%)")
 
-    print("\n  [2/6] Scraping economic calendar...")
+    print("\n  [2/6] Economic calendar...")
     events = scrape_calendar()
-    if not events:
-        events = []    # graceful empty
+    print(f"    {len(events)} events found")
 
-    print("\n  [3/6] Analyzing macro sentiment...")
-    sentiment, net, bullish_sectors, analysed = get_sentiment(events)
-    print(f"    {sentiment}  (score {net:+d})")
-    print(f"    Bullish sectors: {', '.join(bullish_sectors[:5])}")
+    print("\n  [3/6] Sentiment analysis...")
+    sentiment, emoji, net, sectors, analysed = get_sentiment(events)
+    print(f"    {emoji} {sentiment}  (score {net:+d})")
 
-    print("\n  [4/6] Fetching market headlines...")
-    mkt_news = scrape_calendar_fallback()
-    print(f"    {len(mkt_news)} headlines")
+    print("\n  [4/6] Market news...")
+    news = get_market_news()
+    print(f"    {len(news)} headlines")
 
-    print("\n  [5/6] Selecting stocks...")
-    sp500_picks, ndx_picks = pick_stocks(bullish_sectors)
-    print(f"    S&P 500: {', '.join(p['ticker'] for p in sp500_picks)}")
-    print(f"    NDX:     {', '.join(p['ticker'] for p in ndx_picks)}")
+    print("\n  [5/6] Stock selection...")
+    sp_picks, ndx_picks = pick_stocks(sectors)
+    print(f"    S&P:  {', '.join(p['ticker'] for p in sp_picks)}")
+    print(f"    NDX:  {', '.join(p['ticker'] for p in ndx_picks)}")
 
-    print("\n  [6/6] Building report...")
-    html    = build_html(events, sentiment, net, bullish_sectors, analysed,
-                         sp500_picks, ndx_picks, mkt_news, snap)
-    subject = (f"Market Report {datetime.now().strftime('%a %b %d')} "
-               f"| {sentiment.split()[0]} "
-               f"| {' '.join(p['ticker'] for p in sp500_picks[:3])}...")
+    print("\n  [6/6] Building & delivering report...")
+    full_html  = build_full_report(events, sentiment, emoji, net, sectors,
+                                   analysed, sp_picks, ndx_picks, news, snap)
+    email_html = build_email(sentiment, emoji, sp_picks, ndx_picks, snap, net, REPORT_URL)
+    subject    = f"📊 {sentiment} | {', '.join(p['ticker'] for p in sp_picks[:3])} | {datetime.now().strftime('%a %b %d')}"
+
+    # Always save the full report to docs/index.html
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    with open(os.path.join(OUTPUT_DIR,"index.html"),"w",encoding="utf-8") as f:
+        f.write(full_html)
+    print(f"    Full report → {OUTPUT_DIR}/index.html")
 
     if CLOUD_MODE:
-        send_email(html, subject)
-        print(f"    ✓ Email sent → {os.environ['REPORT_EMAIL']}")
+        send_email(email_html, subject)
+        print(f"    Email sent → {os.environ.get('REPORT_EMAIL','')}")
     else:
         import webbrowser
-        os.makedirs(OUTPUT_DIR, exist_ok=True)
-        fname = os.path.join(OUTPUT_DIR, f"macro_{datetime.now().strftime('%Y%m%d')}.html")
-        with open(fname, "w", encoding="utf-8") as f:
-            f.write(html)
-        print(f"    Saved: {fname}")
-        webbrowser.open(f"file:///{fname}")
+        webbrowser.open(f"file:///{os.path.abspath(os.path.join(OUTPUT_DIR,'index.html'))}")
+        print("    Opened in browser.")
 
     print(f"\n{'='*62}\n")
 
