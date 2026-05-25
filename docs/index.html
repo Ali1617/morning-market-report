@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="refresh" content="300">
+<title>Market Report — Monday, May 25, 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:       #080b14;
+  --surface:  #0d1117;
+  --card:     #111827;
+  --border:   #1e1e2e;
+  --border2:  #2d2d3d;
+  --text:     #e2e8f0;
+  --muted:    #64748b;
+  --bull:     #00d4a1;
+  --bear:     #f85149;
+  --blue:     #58a6ff;
+  --purple:   #a371f7;
+  --gold:     #fbbf24;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);
+      min-height:100vh;line-height:1.6;font-size:14px}
+/* ── HEADER ── */
+.header{background:linear-gradient(135deg,#0d1117 0%,#111827 50%,#0d1117 100%);
+         border-bottom:1px solid var(--border);padding:28px 32px 24px;
+         display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
+.header-left h1{font-size:1.5em;font-weight:800;color:#fff;letter-spacing:-0.5px}
+.header-left .subtitle{color:var(--muted);font-size:0.82em;margin-top:3px}
+.sent-badge{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;
+             border-radius:50px;font-weight:700;font-size:1em;letter-spacing:0.3px;
+             background:#0d1e3d;color:#58a6ff;border:1px solid #58a6ff40}
+/* ── MAIN ── */
+.main{max-width:1400px;margin:0 auto;padding:24px 32px}
+/* ── INDEX BAR ── */
+.idx-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px}
+.idx-card{background:var(--card);border:1px solid var(--border);border-radius:12px;
+           padding:16px 20px;transition:transform 0.2s}
+.idx-card:hover{transform:translateY(-2px)}
+.idx-label{font-size:0.75em;color:var(--muted);font-weight:600;text-transform:uppercase;
+            letter-spacing:0.8px;margin-bottom:6px}
+.idx-price{font-family:'JetBrains Mono',monospace;font-size:1.25em;font-weight:600;
+            color:#fff;margin-bottom:3px}
+.idx-chg{font-family:'JetBrains Mono',monospace;font-size:0.88em;font-weight:600}
+/* ── SECTIONS ── */
+.section{background:var(--card);border:1px solid var(--border);border-radius:14px;
+          padding:24px;margin-bottom:20px}
+.section-title{font-size:1.05em;font-weight:700;color:#fff;margin-bottom:16px;
+                display:flex;align-items:center;gap:8px}
+.section-title::before{content:'';display:inline-block;width:3px;height:18px;
+                         border-radius:2px;background:var(--blue)}
+/* ── CALENDAR ── */
+table{width:100%;border-collapse:collapse}
+.cal-row{border-bottom:1px solid var(--border)}
+.cal-row:last-child{border-bottom:none}
+.cal-row:hover{background:rgba(255,255,255,0.02)}
+th{font-size:0.72em;font-weight:600;color:var(--muted);text-transform:uppercase;
+    letter-spacing:0.7px;padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)}
+td{padding:11px 10px;vertical-align:middle}
+.cal-time{font-family:'JetBrains Mono',monospace;font-size:0.8em;color:var(--muted);white-space:nowrap}
+.cal-event{font-weight:500;color:var(--text)}
+.cal-actual{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.95em}
+.impact-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;
+               border-radius:20px;font-size:0.72em;font-weight:600;white-space:nowrap}
+.pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:0.75em;font-weight:600}
+.pill-bull{background:rgba(0,212,161,0.15);color:var(--bull)}
+.pill-bear{background:rgba(248,81,73,0.15);color:var(--bear)}
+.pill-pend{background:rgba(88,166,255,0.12);color:var(--blue)}
+.pill-neut{background:rgba(100,116,139,0.15);color:var(--muted)}
+/* ── SENTIMENT ── */
+.sentiment-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.sent-score{font-family:'JetBrains Mono',monospace;font-size:0.85em;color:var(--muted);margin-top:8px}
+.sector-tag{display:inline-block;background:rgba(88,166,255,0.1);color:var(--blue);
+             border:1px solid rgba(88,166,255,0.25);padding:3px 11px;border-radius:20px;
+             font-size:0.78em;font-weight:500;margin:3px}
+.sectors-wrap{margin-top:10px}
+/* ── NEWS ── */
+.news-list{list-style:none;padding:0}
+.news-list li{padding:8px 0;border-bottom:1px solid var(--border);font-size:0.88em;
+               color:#94a3b8;display:flex;gap:10px}
+.news-list li::before{content:'▸';color:var(--blue);flex-shrink:0}
+.news-list li:last-child{border-bottom:none}
+/* ── PICKS ── */
+.picks-section{margin-bottom:20px}
+.picks-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.stock-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+             padding:16px;transition:transform 0.15s,box-shadow 0.15s}
+.stock-card:hover{transform:translateY(-2px)}
+.card-top{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.rank-badge{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;
+             justify-content:center;font-size:0.75em;font-weight:800;color:#fff;flex-shrink:0}
+.card-ticker{font-size:1.3em;font-weight:800;color:#fff;flex:1}
+.card-premkt{font-family:'JetBrains Mono',monospace;font-size:1.05em;font-weight:700;text-align:right}
+.card-premkt-label{font-size:0.65em;color:var(--muted);font-weight:400}
+.card-price{font-family:'JetBrains Mono',monospace;font-size:0.8em;color:var(--muted);margin-bottom:7px}
+.card-reasons{font-size:0.8em;color:#94a3b8;margin-bottom:5px}
+.news-line{font-size:0.76em;color:var(--muted);border-left:2px solid var(--border2);
+            padding-left:8px;margin:4px 0;line-height:1.4}
+.card-strategy{font-size:0.73em;color:rgba(0,212,161,0.7);margin-top:8px;
+                padding-top:7px;border-top:1px solid var(--border)}
+/* ── PENDING BANNER ── */
+.pending-banner{background:rgba(88,166,255,0.08);border:1px solid rgba(88,166,255,0.25);
+                 border-radius:10px;padding:12px 16px;font-size:0.87em;color:#93c5fd;margin-bottom:16px}
+/* ── TRADING RULES ── */
+.rules-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.rule-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+            padding:12px 14px;font-size:0.83em;color:#94a3b8;display:flex;gap:10px}
+.rule-icon{font-size:1.1em;flex-shrink:0}
+/* ── FOOTER ── */
+.footer{text-align:center;color:var(--muted);font-size:0.75em;padding:24px 32px;
+         border-top:1px solid var(--border);margin-top:8px}
+.muted{color:var(--muted)}
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .header{padding:20px 16px}
+  .main{padding:16px}
+  .idx-bar{grid-template-columns:repeat(2,1fr)}
+  .picks-grid{grid-template-columns:1fr}
+  .rules-grid{grid-template-columns:1fr}
+  th,td{padding:8px 6px}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <h1>🌅 Morning Market Report</h1>
+    <div class="subtitle">Monday, May 25, 2026 &nbsp;·&nbsp; 04:41 AM ET &nbsp;·&nbsp; EMA 9/21 &nbsp;·&nbsp; Long Only &nbsp;·&nbsp; 1.5% Trail</div>
+  </div>
+  <div class="sent-badge">⏳ Pre-Events</div>
+</div>
+
+<div class="main">
+
+  <!-- INDEX SNAPSHOT -->
+  <div class="idx-bar"><div class="idx-card" style="background:rgba(0,212,161,0.06);border-color:#00d4a130">
+          <div class="idx-label">S&P 500</div>
+          <div class="idx-price">7,473.47</div>
+          <div class="idx-chg" style="color:#00d4a1">▲ +0.37%</div>
+        </div><div class="idx-card" style="background:rgba(0,212,161,0.06);border-color:#00d4a130">
+          <div class="idx-label">Nasdaq 100</div>
+          <div class="idx-price">29,481.64</div>
+          <div class="idx-chg" style="color:#00d4a1">▲ +0.42%</div>
+        </div><div class="idx-card" style="background:rgba(248,81,73,0.06);border-color:#f8514930">
+          <div class="idx-label">VIX</div>
+          <div class="idx-price">16.70</div>
+          <div class="idx-chg" style="color:#f85149">▼ -0.36%</div>
+        </div><div class="idx-card" style="background:rgba(0,212,161,0.06);border-color:#00d4a130">
+          <div class="idx-label">Dow Jones</div>
+          <div class="idx-price">50,579.70</div>
+          <div class="idx-chg" style="color:#00d4a1">▲ +0.58%</div>
+        </div></div>
+
+  <!-- ECONOMIC CALENDAR -->
+  <div class="section">
+    <div class="section-title">US Economic Calendar</div>
+    <div class="pending-banner">
+          ⚠️ <strong>Events releasing today</strong> — picks below assume a bullish outcome.
+          If data disappoints, wait 5–10 min after release before entering.
+        </div>
+    <table>
+      <tr>
+        <th>Time</th><th>Event</th><th>Impact</th>
+        <th>Actual</th><th>Forecast</th><th>Previous</th><th>Signal</th>
+      </tr>
+      <tr class="cal-row">
+          <td class="cal-time">12:30 PM</td>
+          <td class="cal-event">chicago fed national activity index</td>
+          <td><span class="impact-badge" style="color:#d29922;background:rgba(210,153,34,0.12);border:1px solid #d2992240">🟡 Medium</span></td>
+          <td class="cal-actual" style="color:#8b949e"><span class="muted">Pending</span></td>
+          <td class="muted">—</td>
+          <td class="muted">—</td>
+          <td><span class='pill pill-pend'>⏳ Pending</span></td>
+        </tr><tr class="cal-row">
+          <td class="cal-time">01:00 PM</td>
+          <td class="cal-event">s&p/case-shiller home price yoy</td>
+          <td><span class="impact-badge" style="color:#d29922;background:rgba(210,153,34,0.12);border:1px solid #d2992240">🟡 Medium</span></td>
+          <td class="cal-actual" style="color:#8b949e"><span class="muted">Pending</span></td>
+          <td class="muted">—</td>
+          <td class="muted">—</td>
+          <td><span class='pill pill-pend'>⏳ Pending</span></td>
+        </tr><tr class="cal-row">
+          <td class="cal-time">01:00 PM</td>
+          <td class="cal-event">house price index</td>
+          <td><span class="impact-badge" style="color:#d29922;background:rgba(210,153,34,0.12);border:1px solid #d2992240">🟡 Medium</span></td>
+          <td class="cal-actual" style="color:#8b949e"><span class="muted">Pending</span></td>
+          <td class="muted">—</td>
+          <td class="muted">—</td>
+          <td><span class='pill pill-pend'>⏳ Pending</span></td>
+        </tr><tr class="cal-row">
+          <td class="cal-time">01:00 PM</td>
+          <td class="cal-event">house price index mom</td>
+          <td><span class="impact-badge" style="color:#d29922;background:rgba(210,153,34,0.12);border:1px solid #d2992240">🟡 Medium</span></td>
+          <td class="cal-actual" style="color:#8b949e"><span class="muted">Pending</span></td>
+          <td class="muted">—</td>
+          <td class="muted">—</td>
+          <td><span class='pill pill-pend'>⏳ Pending</span></td>
+        </tr><tr class="cal-row">
+          <td class="cal-time">01:00 PM</td>
+          <td class="cal-event">house price index yoy</td>
+          <td><span class="impact-badge" style="color:#d29922;background:rgba(210,153,34,0.12);border:1px solid #d2992240">🟡 Medium</span></td>
+          <td class="cal-actual" style="color:#8b949e"><span class="muted">Pending</span></td>
+          <td class="muted">—</td>
+          <td class="muted">—</td>
+          <td><span class='pill pill-pend'>⏳ Pending</span></td>
+        </tr><tr class="cal-row">
+          <td class="cal-time">01:00 PM</td>
+          <td class="cal-event">s&p/case-shiller home price mom</td>
+          <td><span class="impact-badge" style="color:#d29922;background:rgba(210,153,34,0.12);border:1px solid #d2992240">🟡 Medium</span></td>
+          <td class="cal-actual" style="color:#8b949e"><span class="muted">Pending</span></td>
+          <td class="muted">—</td>
+          <td class="muted">—</td>
+          <td><span class='pill pill-pend'>⏳ Pending</span></td>
+        </tr><tr class="cal-row">
+          <td class="cal-time">02:00 PM</td>
+          <td class="cal-event">cb consumer confidence</td>
+          <td><span class="impact-badge" style="color:#d29922;background:rgba(210,153,34,0.12);border:1px solid #d2992240">🟡 Medium</span></td>
+          <td class="cal-actual" style="color:#8b949e"><span class="muted">Pending</span></td>
+          <td class="muted">—</td>
+          <td class="muted">—</td>
+          <td><span class='pill pill-pend'>⏳ Pending</span></td>
+        </tr><tr class="cal-row">
+          <td class="cal-time">02:30 PM</td>
+          <td class="cal-event">dallas fed manufacturing index</td>
+          <td><span class="impact-badge" style="color:#d29922;background:rgba(210,153,34,0.12);border:1px solid #d2992240">🟡 Medium</span></td>
+          <td class="cal-actual" style="color:#8b949e"><span class="muted">Pending</span></td>
+          <td class="muted">—</td>
+          <td class="muted">—</td>
+          <td><span class='pill pill-pend'>⏳ Pending</span></td>
+        </tr><tr class="cal-row">
+          <td class="cal-time">03:30 PM</td>
+          <td class="cal-event">3-month bill auction</td>
+          <td><span class="impact-badge" style="color:#d29922;background:rgba(210,153,34,0.12);border:1px solid #d2992240">🟡 Medium</span></td>
+          <td class="cal-actual" style="color:#8b949e"><span class="muted">Pending</span></td>
+          <td class="muted">—</td>
+          <td class="muted">—</td>
+          <td><span class='pill pill-pend'>⏳ Pending</span></td>
+        </tr><tr class="cal-row">
+          <td class="cal-time">03:30 PM</td>
+          <td class="cal-event">6-week bill auction</td>
+          <td><span class="impact-badge" style="color:#d29922;background:rgba(210,153,34,0.12);border:1px solid #d2992240">🟡 Medium</span></td>
+          <td class="cal-actual" style="color:#8b949e"><span class="muted">Pending</span></td>
+          <td class="muted">—</td>
+          <td class="muted">—</td>
+          <td><span class='pill pill-pend'>⏳ Pending</span></td>
+        </tr><tr class="cal-row">
+          <td class="cal-time">05:00 PM</td>
+          <td class="cal-event">2-year note auction</td>
+          <td><span class="impact-badge" style="color:#d29922;background:rgba(210,153,34,0.12);border:1px solid #d2992240">🟡 Medium</span></td>
+          <td class="cal-actual" style="color:#8b949e"><span class="muted">Pending</span></td>
+          <td class="muted">—</td>
+          <td class="muted">—</td>
+          <td><span class='pill pill-pend'>⏳ Pending</span></td>
+        </tr><tr class="cal-row">
+          <td class="cal-time">05:00 PM</td>
+          <td class="cal-event">6-month bill auction</td>
+          <td><span class="impact-badge" style="color:#d29922;background:rgba(210,153,34,0.12);border:1px solid #d2992240">🟡 Medium</span></td>
+          <td class="cal-actual" style="color:#8b949e"><span class="muted">Pending</span></td>
+          <td class="muted">—</td>
+          <td class="muted">—</td>
+          <td><span class='pill pill-pend'>⏳ Pending</span></td>
+        </tr>
+    </table>
+  </div>
+
+  <!-- SENTIMENT -->
+  <div class="section">
+    <div class="section-title">Market Sentiment</div>
+    <div class="sentiment-row">
+      <div class="sent-badge">⏳ Pre-Events</div>
+    </div>
+    <div class="sent-score">Macro score: +0 &nbsp;·&nbsp; Favoured sectors:</div>
+    <div class="sectors-wrap"><span class='sector-tag'>Communication</span><span class='sector-tag'>Technology</span><span class='sector-tag'>Consumer Discretionary</span><span class='sector-tag'>Mega Cap Tech</span><span class='sector-tag'>Semiconductors</span></div>
+  </div>
+
+  <!-- HEADLINES -->
+  <div class="section">
+    <div class="section-title">Market Headlines</div>
+    <ul class="news-list"><li>Stocks and earnings surge, and Iran deal may be imminent: What to watch this week</li><li>Is the Stock Market Open Today? Here Are the Trading Hours for Memorial Day.</li><li>Dow Jones Futures Rise, Oil Prices Fall: Trump Says No 'Rush' For Iran Deal</li><li>Oil Tumbles, Stock Futures Rise Amid Hopes for Iran Deal</li><li>Stocks Settle Higher on Iran Peace Hopes and Tech Strength</li><li>Stocks Climb on US-Iran Peace Hopes and Strength in Chipmakers</li><li>The ‘Stock Market Maestros’ Author Has a Brutally Simple Rule for Long-Term Investors</li><li>After Years of Watching Volatility Spikes These Are the 3 Utility ETFs Built for Investors Who Want Income Without Sleepless Nights</li></ul>
+  </div>
+
+  <!-- S&P 500 PICKS -->
+  <div class="section">
+    <div class="picks-section">
+          <h2 class="section-title">S&amp;P 500 — Top 10 Long Candidates</h2>
+          <div class="picks-grid"><div class="stock-card" style="border-color:#58a6ff;box-shadow:0 0 20px #58a6ff22;">
+              <div class="card-top">
+                <div class="rank-badge" style="background:#58a6ff">#1</div>
+                <div class="card-ticker">DELL</div>
+                <div class="card-premkt" style="color:#00d4a1">+16.07%<span class="card-premkt-label"> pre</span></div>
+              </div>
+              <div class="card-price">$295.19 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+16.77% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol 2.2×</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 16.07%  ·  Vol 2.2× avg  ·  News catalyst</div>
+              <div class="news-line">▸ Dow Jones Futures Rise, Oil Prices Fall: Trump Says No 'Rush' For Iran Deal</div>
+              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
+            </div><div class="stock-card" style="border-color:#58a6ff;box-shadow:0 0 20px #58a6ff22;">
+              <div class="card-top">
+                <div class="rank-badge" style="background:#58a6ff">#2</div>
+                <div class="card-ticker">HPQ</div>
+                <div class="card-premkt" style="color:#00d4a1">+14.83%<span class="card-premkt-label"> pre</span></div>
+              </div>
+              <div class="card-price">$25.24 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+15.25% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol 2.5×</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 14.83%  ·  Vol 2.5× avg  ·  News catalyst</div>
+              <div class="news-line">▸ Does HPQ’s New Dividend Reveal Its True Priorities Between AI Ambition and Shareholder Payouts?</div>
+              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
+            </div><div class="stock-card" style="border-color:#58a6ff;box-shadow:0 0 20px #58a6ff22;">
+              <div class="card-top">
+                <div class="rank-badge" style="background:#58a6ff">#3</div>
+                <div class="card-ticker">QCOM</div>
+                <div class="card-premkt" style="color:#00d4a1">+11.27%<span class="card-premkt-label"> pre</span></div>
+              </div>
+              <div class="card-price">$238.16 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+11.60% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol 1.3×</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 11.27%  ·  News catalyst</div>
+              <div class="news-line">▸ Qualcomm Stock Is the Sleeping Giant of the AI Revolution. It’s Starting to Wake Up.</div>
+              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
+            </div><div class="stock-card" style="border-color:#1e1e2e;">
+              <div class="card-top">
+                <div class="rank-badge" style="background:#1e1e2e">#4</div>
+                <div class="card-ticker">F</div>
+                <div class="card-premkt" style="color:#00d4a1">+9.06%<span class="card-premkt-label"> pre</span></div>
+              </div>
+              <div class="card-price">$14.93 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+9.22% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol 1.6×</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 9.06%  ·  Vol 1.6× avg  ·  News catalyst</div>
+              <div class="news-line">▸ Ford Takes Aim At Tesla And BYD In Europe With New Electric Hatchback, SUV Roadmap</div>
+              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
+            </div><div class="stock-card" style="border-color:#1e1e2e;">
+              <div class="card-top">
+                <div class="rank-badge" style="background:#1e1e2e">#5</div>
+                <div class="card-ticker">AMD</div>
+                <div class="card-premkt" style="color:#00d4a1">+3.31%<span class="card-premkt-label"> pre</span></div>
+              </div>
+              <div class="card-price">$467.51 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+3.99% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol 1.1×</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 3.31%  ·  News catalyst</div>
+              <div class="news-line">▸ The Best Stocks to Buy Right Now: Nvidia vs. AMD vs. Broadcom</div>
+              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
+            </div><div class="stock-card" style="border-color:#1e1e2e;">
+              <div class="card-top">
+                <div class="rank-badge" style="background:#1e1e2e">#6</div>
+                <div class="card-ticker">TXN</div>
+                <div class="card-premkt" style="color:#00d4a1">+3.43%<span class="card-premkt-label"> pre</span></div>
+              </div>
+              <div class="card-price">$309.21 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+3.63% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol 1.0×</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 3.43%  ·  News catalyst</div>
+              <div class="news-line">▸ Jim Cramer Discusses Texas Instruments’ (TXN) Market</div>
+              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
+            </div><div class="stock-card" style="border-color:#1e1e2e;">
+              <div class="card-top">
+                <div class="rank-badge" style="background:#1e1e2e">#7</div>
+                <div class="card-ticker">ADI</div>
+                <div class="card-premkt" style="color:#00d4a1">+3.04%<span class="card-premkt-label"> pre</span></div>
+              </div>
+              <div class="card-price">$397.07 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+3.35% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol 0.9×</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 3.04%  ·  News catalyst</div>
+              <div class="news-line">▸ Jim Cramer Discusses Analog Devices’ (ADI) Market</div>
+              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
+            </div><div class="stock-card" style="border-color:#1e1e2e;">
+              <div class="card-top">
+                <div class="rank-badge" style="background:#1e1e2e">#8</div>
+                <div class="card-ticker">KLAC</div>
+                <div class="card-premkt" style="color:#00d4a1">+2.13%<span class="card-premkt-label"> pre</span></div>
+              </div>
+              <div class="card-price">$1,888.38 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+2.51% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol 0.8×</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 2.13%  ·  News catalyst</div>
+              <div class="news-line">▸ The Bull Case For KLA (KLAC) Could Change Following Earnings Beat And Expanded Capital Returns Learn</div>
+              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
+            </div><div class="stock-card" style="border-color:#1e1e2e;">
+              <div class="card-top">
+                <div class="rank-badge" style="background:#1e1e2e">#9</div>
+                <div class="card-ticker">GM</div>
+                <div class="card-premkt" style="color:#00d4a1">+2.13%<span class="card-premkt-label"> pre</span></div>
+              </div>
+              <div class="card-price">$78.79 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+2.05% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol 1.0×</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 2.13%  ·  News catalyst</div>
+              <div class="news-line">▸ GM, Ford, Stellantis CEOs go back to the drawing board with EVs</div>
+              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
+            </div><div class="stock-card" style="border-color:#1e1e2e;">
+              <div class="card-top">
+                <div class="rank-badge" style="background:#1e1e2e">#10</div>
+                <div class="card-ticker">CSCO</div>
+                <div class="card-premkt" style="color:#00d4a1">+1.59%<span class="card-premkt-label"> pre</span></div>
+              </div>
+              <div class="card-price">$120.41 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+1.87% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol 0.9×</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 1.59%  ·  News catalyst</div>
+              <div class="news-line">▸ Nvidia’s Hidden $60 Billion Business Is About to Overtake Broadcom</div>
+              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
+            </div></div>
+        </div>
+  </div>
+
+  <!-- NDX PICKS -->
+  <div class="section">
+    <div class="picks-section">
+          <h2 class="section-title">Nasdaq 100 — Top 10 Long Candidates</h2>
+          <div class="picks-grid"><div class="stock-card" style="border-color:#a371f7;box-shadow:0 0 20px #a371f722;">
+              <div class="card-top">
+                <div class="rank-badge" style="background:#a371f7">#1</div>
+                <div class="card-ticker">QCOM</div>
+                <div class="card-premkt" style="color:#00d4a1">+11.27%<span class="card-premkt-label"> pre</span></div>
+              </div>
+              <div class="card-price">$238.16 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+11.60% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol 1.3×</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 11.27%  ·  News catalyst</div>
+              <div class="news-line">▸ Qualcomm Stock Is the Sleeping Giant of the AI Revolution. It’s Starting to Wake Up.</div>
+              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
+            </div><div class="stock-card" style="border-color:#a371f7;box-shadow:0 0 20px #a371f722;">
+              <div class="card-top">
+                <div class="rank-badge" style="background:#a371f7">#2</div>
+                <div class="card-ticker">SMCI</div>
+                <div class="card-premkt" style="color:#00d4a1">+6.11%<span class="card-premkt-label"> pre</span></div>
+              </div>
+              <div class="card-price">$35.58 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+6.34% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol 1.3×</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 6.11%  ·  News catalyst</div>
+              <div class="news-line">▸ Can Super Micro (SMCI) Reframe Its AI Margin Story Amid Export-Control Scrutiny and Leadership Chang</div>
+              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
+            </div><div class="stock-card" style="border-color:#a371f7;box-shadow:0 0 20px #a371f722;">
+              <div class="card-top">
+                <div class="rank-badge" style="background:#a371f7">#3</div>
+                <div class="card-ticker">ON</div>
+                <div class="card-premkt" style="color:#00d4a1">+5.64%<span class="card-premkt-label"> pre</span></div>
+              </div>
+              <div class="card-price">$116.20 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+6.01% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol 0.9×</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 5.64%  ·  News catalyst</div>
+              <div class="news-line">▸ Does Record Cash Flow, $6 Billion Buyback and GaN Push Change The Bull Case For ON (ON)?</div>
+              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
+            </div><div class="stock-card" style="border-color:#1e1e2e;">
+              <div class="card-top">
+                <div class="rank-badge" style="background:#1e1e2e">#4</div>
+                <div class="card-ticker">NXPI</div>
+                <div class="card-premkt" style="color:#00d4a1">+5.57%<span class="card-premkt-label"> pre</span></div>
+              </div>
+              <div class="card-price">$316.47 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+5.71% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol 0.9×</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 5.57%  ·  News catalyst</div>
+              <div class="news-line">▸ NXP Semiconductors and Himax Stocks Trade Up, What You Need To Know</div>
+              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
+            </div><div class="stock-card" style="border-color:#1e1e2e;">
+              <div class="card-top">
+                <div class="rank-badge" style="background:#1e1e2e">#5</div>
+                <div class="card-ticker">ZS</div>
+                <div class="card-premkt" style="color:#00d4a1">+5.42%<span class="card-premkt-label"> pre</span></div>
+              </div>
+              <div class="card-price">$182.37 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+6.64% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol 1.0×</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 5.42%  ·  News catalyst</div>
+              <div class="news-line">▸ Zscaler Earnings: What To Look For From ZS</div>
+              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
+            </div><div class="stock-card" style="border-color:#1e1e2e;">
+              <div class="card-top">
+                <div class="rank-badge" style="background:#1e1e2e">#6</div>
+                <div class="card-ticker">AMD</div>
+                <div class="card-premkt" style="color:#00d4a1">+3.31%<span class="card-premkt-label"> pre</span></div>
+              </div>
+              <div class="card-price">$467.51 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+3.99% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol 1.1×</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 3.31%  ·  News catalyst</div>
+              <div class="news-line">▸ The Best Stocks to Buy Right Now: Nvidia vs. AMD vs. Broadcom</div>
+              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
+            </div><div class="stock-card" style="border-color:#1e1e2e;">
+              <div class="card-top">
+                <div class="rank-badge" style="background:#1e1e2e">#7</div>
+                <div class="card-ticker">TTD</div>
+                <div class="card-premkt" style="color:#00d4a1">+4.87%<span class="card-premkt-label"> pre</span></div>
+              </div>
+              <div class="card-price">$22.38 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+5.17% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol 0.9×</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 4.87%  ·  News catalyst</div>
+              <div class="news-line">▸ Why The Trade Desk (TTD) Stock Is Up Today</div>
+              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
+            </div><div class="stock-card" style="border-color:#1e1e2e;">
+              <div class="card-top">
+                <div class="rank-badge" style="background:#1e1e2e">#8</div>
+                <div class="card-ticker">CDNS</div>
+                <div class="card-premkt" style="color:#00d4a1">+3.73%<span class="card-premkt-label"> pre</span></div>
+              </div>
+              <div class="card-price">$373.59 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+4.22% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol 1.1×</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 3.73%  ·  News catalyst</div>
+              <div class="news-line">▸ Cadence LiDAR IP Win With Aeva Highlights Expanding Physical AI Role</div>
+              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
+            </div><div class="stock-card" style="border-color:#1e1e2e;">
+              <div class="card-top">
+                <div class="rank-badge" style="background:#1e1e2e">#9</div>
+                <div class="card-ticker">INTU</div>
+                <div class="card-premkt" style="color:#00d4a1">+3.93%<span class="card-premkt-label"> pre</span></div>
+              </div>
+              <div class="card-price">$319.94 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+4.19% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol 1.3×</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 3.93%  ·  News catalyst</div>
+              <div class="news-line">▸ Why Intuit Stock Plummeted This Week</div>
+              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
+            </div><div class="stock-card" style="border-color:#1e1e2e;">
+              <div class="card-top">
+                <div class="rank-badge" style="background:#1e1e2e">#10</div>
+                <div class="card-ticker">MCHP</div>
+                <div class="card-premkt" style="color:#00d4a1">+2.15%<span class="card-premkt-label"> pre</span></div>
+              </div>
+              <div class="card-price">$93.43 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+3.06% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol 1.0×</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 2.15%  ·  News catalyst</div>
+              <div class="news-line">▸ Universal Display and Microchip Technology Shares Are Soaring, What You Need To Know</div>
+              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
+            </div></div>
+        </div>
+  </div>
+
+  <!-- TRADING RULES -->
+  <div class="section">
+    <div class="section-title">Trading Rules</div>
+    <div class="rules-grid">
+      <div class="rule-item"><span class="rule-icon">📍</span><span><strong>Long only</strong> — only enter when EMA 9 crosses above EMA 21</span></div>
+      <div class="rule-item"><span class="rule-icon">⏱</span><span>Wait for the <strong>first 5-min bar to close</strong> before entering any trade</span></div>
+      <div class="rule-item"><span class="rule-icon">🛡</span><span><strong>1.5% trailing stop</strong> on every position — no exceptions</span></div>
+      <div class="rule-item"><span class="rule-icon">📰</span><span>High-impact events during session → <strong>wait 5–10 min</strong> after the release</span></div>
+      <div class="rule-item"><span class="rule-icon">📊</span><span>Pre-market movers with <strong>vol 1.5×+</strong> tend to continue first 30–60 min</span></div>
+      <div class="rule-item"><span class="rule-icon">⚡</span><span>VIX &gt; 20 = reduce size. VIX &lt; 15 = normal size, cleaner trends</span></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  Auto-generated by Claude Code &nbsp;·&nbsp; Data: Trading Economics + Yahoo Finance
+  &nbsp;·&nbsp; Refreshes every 5 min &nbsp;·&nbsp; Not financial advice
+</div>
+
+</body>
+</html>
