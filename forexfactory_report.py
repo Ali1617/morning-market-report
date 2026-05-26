@@ -797,14 +797,9 @@ def build_email(sentiment, emoji, sp_picks, ndx_picks, snap, net, report_url):
 
   <!-- CTA Button -->
   <div style="text-align:center;margin-bottom:20px">
-    <a href="{report_url}" style="display:inline-block;background:linear-gradient(135deg,#1d4ed8,#7c3aed);
-       color:#fff;text-decoration:none;font-weight:700;font-size:16px;
-       padding:16px 40px;border-radius:50px;letter-spacing:0.3px">
-      📊 Open Full Report →
-    </a>
-    <div style="margin-top:10px;font-size:11px;color:#475569">
-      Full economic calendar · All 10 picks · Trading rules
-    </div>
+    <a href="{report_url}" target="_blank" style="display:inline-block;background:#1d4ed8;color:#ffffff;text-decoration:none;font-weight:700;font-size:16px;padding:16px 40px;border-radius:50px;letter-spacing:0.3px;mso-padding-alt:0">📊 Open Full Report →</a>
+    <div style="margin-top:10px;font-size:11px;color:#475569">Full economic calendar · All 10 picks · Trading rules</div>
+    <div style="margin-top:6px;font-size:11px;color:#475569">Or copy: <a href="{report_url}" style="color:#58a6ff">{report_url}</a></div>
   </div>
 
   <!-- Footer -->
