@@ -833,10 +833,14 @@ def check_et_time():
     try:
         from zoneinfo import ZoneInfo
         now = datetime.now(ZoneInfo("America/New_York"))
-        if now.hour != 8 or now.minute < 28:
-            print(f"Not 8:30 AM ET ({now.strftime('%I:%M %p ET')}), skipping.")
+        # Allow the full 8 AM hour — covers any GitHub Actions spin-up delay.
+        # The 9:30 AM backup cron (winter guard) is blocked since hour=9.
+        if now.hour != 8:
+            print(f"Outside 8 AM ET window ({now.strftime('%I:%M %p ET')}), skipping.")
             sys.exit(0)
-    except: pass
+        print(f"  Time check passed: {now.strftime('%I:%M %p ET')}")
+    except:
+        pass
 
 
 # ─── MAIN ─────────────────────────────────────────────────────────────────────
