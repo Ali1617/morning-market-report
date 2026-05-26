@@ -189,73 +189,197 @@ def index_snapshot():
         except: snap[label] = None
     return snap
 
-def score_stocks(tickers):
-    if not tickers: return []
+def _calc_rsi(close_arr, period=14):
+    """Wilder RSI from a numpy/list of closes."""
+    s = pd.Series(close_arr, dtype=float)
+    delta = s.diff()
+    gain  = delta.clip(lower=0).ewm(com=period-1, adjust=False).mean()
+    loss  = (-delta.clip(upper=0)).ewm(com=period-1, adjust=False).mean()
+    rs    = gain / (loss + 1e-10)
+    return float(100 - 100 / (1 + rs.iloc[-1]))
+
+
+def score_stocks(tickers, ref_day_chg=0.0):
+    """
+    Multi-factor long candidate scorer.
+
+    Hard filters (eliminate outright):
+      • Price < $8              — poor intraday spreads
+      • Day change < -2.5%     — broken momentum, avoid
+      • Pre-mkt < -1.5% AND day < -1.0% — confirmed sell-off
+      • RSI > 80               — overbought, no room to run
+      • RSI < 35               — in a downtrend
+      • News score <= -5       — negative catalyst
+
+    Scoring (higher = better long):
+      pre_chg  × 3.5   — pre-market momentum (strongest signal)
+      day_chg  × 2.0   — yesterday's close direction
+      (vol_ratio-1)×2.5 — volume surge vs 30-day average
+      rel_str  × 1.5   — outperforming SPY/QQQ today
+      rsi_bonus         — +2.5 if RSI 45-68 (sweet spot), +1 if 68-78
+      ema_bonus         — +2 if price > 20-day EMA, -1 if below
+      gap_bonus         — +2 if pre-mkt gap >0.5%, +0.8 if >0.2%
+      vol_surge_bonus   — extra +1.5 if volume > 2× average
+      news_score        — ±points from headline keywords
+    """
+    if not tickers:
+        return []
+
+    # ── Batch-download 30 days of daily data (needed for RSI14 + EMA20) ──────
     all_data = {}
     for i in range(0, len(tickers), 40):
         batch = tickers[i:i+40]
         try:
-            raw = yf.download(batch, period="5d", interval="1d",
+            raw = yf.download(batch, period="30d", interval="1d",
                               auto_adjust=True, progress=False,
                               group_by="ticker", threads=True)
             for tk in batch:
                 try:
-                    all_data[tk] = (raw[tk] if len(batch)>1 else raw).dropna()
-                except: all_data[tk] = None
-        except: pass
+                    all_data[tk] = (raw[tk] if len(batch) > 1 else raw).dropna()
+                except:
+                    all_data[tk] = None
+        except:
+            pass
+
+    POS_WORDS = {"beat","surge","rise","rally","upgrade","buy","strong","record",
+                 "growth","profit","raises","exceed","above","jumps","soars","wins"}
+    NEG_WORDS = {"miss","fall","drop","downgrade","sell","loss","weak","cuts",
+                 "warning","fraud","below","recall","investigation","probe","halt"}
 
     scored = []
     for tk in tickers:
         try:
             df = all_data.get(tk)
-            price = day_chg = vol_ratio = 0.0
-            if df is not None and len(df) >= 2:
-                price    = float(df["Close"].iloc[-1])
-                prev     = float(df["Close"].iloc[-2])
-                day_chg  = (price - prev) / prev * 100
-                vol_ratio = float(df["Volume"].iloc[-1]) / (float(df["Volume"].mean()) + 1)
+            if df is None or len(df) < 5:
+                continue
+
+            close_arr = df["Close"].values.astype(float)
+            price     = close_arr[-1]
+
+            # ── Hard filters ───────────────────────────────────────────────
+            if price < 8:                          # penny / micro-cap
+                continue
+
+            prev    = close_arr[-2]
+            day_chg = (price - prev) / prev * 100
+
+            if day_chg < -2.5:                     # hard sell-off yesterday
+                continue
+
+            # ── Volume ────────────────────────────────────────────────────
+            avg_vol   = float(df["Volume"].mean()) + 1
+            vol_ratio = float(df["Volume"].iloc[-1]) / avg_vol
+
+            # ── Pre-market ────────────────────────────────────────────────
             pre_chg = 0.0
             try:
                 fi = yf.Ticker(tk).fast_info
-                if hasattr(fi,"last_price") and fi.previous_close:
+                if hasattr(fi, "last_price") and fi.previous_close:
                     pre_chg = (fi.last_price - fi.previous_close) / fi.previous_close * 100
-            except: pass
-            if pre_chg < -1.5 and day_chg < -1.0: continue
+            except:
+                pass
+
+            if pre_chg < -1.5 and day_chg < -1.0: # confirmed sell-off
+                continue
+
+            # ── RSI(14) ───────────────────────────────────────────────────
+            rsi = _calc_rsi(close_arr) if len(close_arr) >= 15 else 50.0
+            if rsi > 80 or rsi < 35:               # overbought / downtrend
+                continue
+
+            # ── 20-day EMA trend filter ───────────────────────────────────
+            ema20       = float(pd.Series(close_arr).ewm(span=20, adjust=False).mean().iloc[-1])
+            above_ema20 = price > ema20
+
+            # ── Relative strength vs market ───────────────────────────────
+            rel_strength = day_chg - ref_day_chg   # positive = outperforming index
+
+            # ── News ──────────────────────────────────────────────────────
             headlines, news_score = [], 0
             try:
                 for n in (yf.Ticker(tk).news or [])[:3]:
-                    t = n.get("content",{}).get("title") or n.get("title","")
+                    t = n.get("content", {}).get("title") or n.get("title", "")
                     if t:
                         headlines.append(t)
-                        hl = t.lower()
-                        pos = ["beat","surge","rise","rally","upgrade","buy","strong","record","growth","profit"]
-                        neg = ["miss","fall","drop","downgrade","sell","loss","weak","cuts","warning","fraud"]
-                        if any(w in hl for w in pos): news_score += 4
-                        if any(w in hl for w in neg): news_score -= 5
-            except: pass
-            if news_score <= -5: continue
-            score = pre_chg*3 + day_chg*1.5 + (vol_ratio-1)*3 + news_score
-            scored.append({"ticker":tk,"score":round(score,2),"price":round(price,2),
-                           "pre_chg":round(pre_chg,2),"day_chg":round(day_chg,2),
-                           "vol_ratio":round(vol_ratio,2),"news":headlines})
-        except: pass
+                        words = set(t.lower().split())
+                        if words & POS_WORDS: news_score += 4
+                        if words & NEG_WORDS: news_score -= 5
+            except:
+                pass
+
+            if news_score <= -5:
+                continue
+
+            # ── Composite score ───────────────────────────────────────────
+            rsi_bonus      = 2.5 if 45 <= rsi <= 68 else (1.0 if rsi <= 78 else 0.0)
+            ema_bonus      = 2.0 if above_ema20 else -1.0
+            gap_bonus      = 2.0 if pre_chg > 0.5 else (0.8 if pre_chg > 0.2 else 0.0)
+            vol_surge_bonus= 1.5 if vol_ratio > 2.0 else 0.0
+
+            score = (
+                pre_chg * 3.5
+                + day_chg * 2.0
+                + (vol_ratio - 1) * 2.5
+                + rel_strength * 1.5
+                + rsi_bonus
+                + ema_bonus
+                + gap_bonus
+                + vol_surge_bonus
+                + news_score
+            )
+
+            scored.append({
+                "ticker":      tk,
+                "score":       round(score, 2),
+                "price":       round(price, 2),
+                "pre_chg":     round(pre_chg, 2),
+                "day_chg":     round(day_chg, 2),
+                "vol_ratio":   round(vol_ratio, 2),
+                "rsi":         round(rsi, 1),
+                "above_ema20": above_ema20,
+                "rel_str":     round(rel_strength, 2),
+                "news":        headlines,
+            })
+        except:
+            pass
+
     scored.sort(key=lambda x: x["score"], reverse=True)
     return scored
 
+
 def pick_stocks(sectors):
+    # ── Reference return: SPY for S&P, QQQ for NDX ───────────────────────────
+    spy_chg = qcq_chg = 0.0
+    try:
+        spy_fi  = yf.Ticker("SPY").fast_info
+        spy_chg = (spy_fi.last_price - spy_fi.previous_close) / spy_fi.previous_close * 100
+    except: pass
+    try:
+        qqq_fi  = yf.Ticker("QQQ").fast_info
+        qcq_chg = (qqq_fi.last_price - qqq_fi.previous_close) / qqq_fi.previous_close * 100
+    except: pass
+
+    # ── Candidate pool ────────────────────────────────────────────────────────
     sp_c, nd_c = [], []
+
+    # Priority: macro-favoured sectors first
     for s in sectors:
-        sp_c.extend(SP500_SECTORS.get(s,[]))
-        nd_c.extend(NDX_SECTORS.get(s,[]))
-    for s in ["Technology","Consumer Discretionary","Communication"]:
-        sp_c.extend(SP500_SECTORS.get(s,[]))
-    for s in ["Mega Cap Tech","Semiconductors","Software / Cloud"]:
-        nd_c.extend(NDX_SECTORS.get(s,[]))
-    sp_c = list(dict.fromkeys(sp_c))[:100]
-    nd_c = list(dict.fromkeys(nd_c))[:80]
+        sp_c.extend(SP500_SECTORS.get(s, []))
+        nd_c.extend(NDX_SECTORS.get(s, []))
+
+    # Always include core high-liquidity sectors as a baseline
+    for s in list(SP500_SECTORS.keys()):
+        sp_c.extend(SP500_SECTORS.get(s, []))
+    for s in list(NDX_SECTORS.keys()):
+        nd_c.extend(NDX_SECTORS.get(s, []))
+
+    sp_c = list(dict.fromkeys(sp_c))[:120]
+    nd_c = list(dict.fromkeys(nd_c))[:100]
+
     print(f"    Scoring {len(sp_c)} S&P candidates...")
     print(f"    Scoring {len(nd_c)} NDX candidates...")
-    return score_stocks(sp_c)[:TOP_N], score_stocks(nd_c)[:TOP_N]
+    return score_stocks(sp_c, ref_day_chg=spy_chg)[:TOP_N], \
+           score_stocks(nd_c, ref_day_chg=qcq_chg)[:TOP_N]
 
 # ─── FULL REPORT HTML (GitHub Pages) ─────────────────────────────────────────
 def build_full_report(events, sentiment, emoji, net, sectors, analysed,
@@ -344,8 +468,18 @@ def build_full_report(events, sentiment, emoji, net, sectors, analysed,
             reasons = []
             if abs(p["pre_chg"]) > 0.15: reasons.append(f"Pre-mkt {'▲' if p['pre_chg']>0 else '▼'} {abs(p['pre_chg']):.2f}%")
             if p["vol_ratio"] > 1.4:     reasons.append(f"Vol {p['vol_ratio']:.1f}× avg")
+            if p.get("rel_str", 0) > 0.3:reasons.append(f"RS +{p['rel_str']:.1f}% vs index")
             if p["news"]:                reasons.append("News catalyst")
             if not reasons:              reasons.append("Macro tailwind")
+
+            # RSI badge colour
+            rsi_val = p.get("rsi", 50)
+            rsi_col  = "#00d4a1" if rsi_val < 68 else ("#fbbf24" if rsi_val < 78 else "#f85149")
+
+            # EMA badge
+            ema_ok   = p.get("above_ema20", True)
+            ema_col  = "#00d4a1" if ema_ok else "#f85149"
+            ema_lbl  = "▲ EMA20" if ema_ok else "▼ EMA20"
 
             news_html = ""
             for n in p["news"][:1]:
@@ -360,6 +494,10 @@ def build_full_report(events, sentiment, emoji, net, sectors, analysed,
               <div class="card-price">${p['price']:,.2f} &nbsp;·&nbsp;
                 <span style="color:{dc_col}">{p['day_chg']:+.2f}% yest</span> &nbsp;·&nbsp;
                 <span class="muted">Vol {p['vol_ratio']:.1f}×</span>
+              </div>
+              <div class="card-signals">
+                <span class="sig-badge" style="color:{rsi_col};border-color:{rsi_col}40">RSI {rsi_val:.0f}</span>
+                <span class="sig-badge" style="color:{ema_col};border-color:{ema_col}40">{ema_lbl}</span>
               </div>
               <div class="card-reasons">{'  ·  '.join(reasons)}</div>
               {news_html}
@@ -480,6 +618,9 @@ td{{padding:11px 10px;vertical-align:middle}}
 .card-premkt{{font-family:'JetBrains Mono',monospace;font-size:1.05em;font-weight:700;text-align:right}}
 .card-premkt-label{{font-size:0.65em;color:var(--muted);font-weight:400}}
 .card-price{{font-family:'JetBrains Mono',monospace;font-size:0.8em;color:var(--muted);margin-bottom:7px}}
+.card-signals{{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:7px}}
+.sig-badge{{font-family:'JetBrains Mono',monospace;font-size:0.72em;font-weight:600;
+             padding:2px 8px;border-radius:6px;border:1px solid;letter-spacing:0.3px}}
 .card-reasons{{font-size:0.8em;color:#94a3b8;margin-bottom:5px}}
 .news-line{{font-size:0.76em;color:var(--muted);border-left:2px solid var(--border2);
             padding-left:8px;margin:4px 0;line-height:1.4}}
