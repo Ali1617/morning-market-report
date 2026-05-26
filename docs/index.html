@@ -97,6 +97,9 @@ td{padding:11px 10px;vertical-align:middle}
 .card-premkt{font-family:'JetBrains Mono',monospace;font-size:1.05em;font-weight:700;text-align:right}
 .card-premkt-label{font-size:0.65em;color:var(--muted);font-weight:400}
 .card-price{font-family:'JetBrains Mono',monospace;font-size:0.8em;color:var(--muted);margin-bottom:7px}
+.card-signals{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:7px}
+.sig-badge{font-family:'JetBrains Mono',monospace;font-size:0.72em;font-weight:600;
+             padding:2px 8px;border-radius:6px;border:1px solid;letter-spacing:0.3px}
 .card-reasons{font-size:0.8em;color:#94a3b8;margin-bottom:5px}
 .news-line{font-size:0.76em;color:var(--muted);border-left:2px solid var(--border2);
             padding-left:8px;margin:4px 0;line-height:1.4}
@@ -131,7 +134,7 @@ td{padding:11px 10px;vertical-align:middle}
 <div class="header">
   <div class="header-left">
     <h1>🌅 Morning Market Report</h1>
-    <div class="subtitle">Tuesday, May 26, 2026 &nbsp;·&nbsp; 05:25 AM ET &nbsp;·&nbsp; EMA 9/21 &nbsp;·&nbsp; Long Only &nbsp;·&nbsp; 1.5% Trail</div>
+    <div class="subtitle">Tuesday, May 26, 2026 &nbsp;·&nbsp; 05:37 AM ET &nbsp;·&nbsp; EMA 9/21 &nbsp;·&nbsp; Long Only &nbsp;·&nbsp; 1.5% Trail</div>
   </div>
   <div class="sent-badge">⏳ Pre-Events</div>
 </div>
@@ -276,13 +279,13 @@ td{padding:11px 10px;vertical-align:middle}
       <div class="sent-badge">⏳ Pre-Events</div>
     </div>
     <div class="sent-score">Macro score: +0 &nbsp;·&nbsp; Favoured sectors:</div>
-    <div class="sectors-wrap"><span class='sector-tag'>Semiconductors</span><span class='sector-tag'>Mega Cap Tech</span><span class='sector-tag'>Consumer Discretionary</span><span class='sector-tag'>Communication</span><span class='sector-tag'>Technology</span></div>
+    <div class="sectors-wrap"><span class='sector-tag'>Mega Cap Tech</span><span class='sector-tag'>Semiconductors</span><span class='sector-tag'>Consumer Discretionary</span><span class='sector-tag'>Technology</span><span class='sector-tag'>Communication</span></div>
   </div>
 
   <!-- HEADLINES -->
   <div class="section">
     <div class="section-title">Market Headlines</div>
-    <ul class="news-list"><li>Dow Jones Futures Rise But Pare Gains On Mixed Iran News; Marvell, Dell, Costco Ahead</li><li>This AI Stock Has Been Called Overvalued for 3 Years. The Bears Keep Losing.</li><li>S&P 500, Nasdaq, Dow Futures Rise On Hopes Of Hormuz Reopening As Trump Teases ‘Great Deal’ With Iran: BB, INFQ, NVTS, ASTS In Focus</li><li>The Nasdaq’s AI Fast‑Track Will Reshape Big Tech — The S&P Might Be Ready to Change the Rules, Too</li><li>Oil Tumbles, Stock Futures Rise Amid Hopes for Iran Deal</li><li>Stocks Settle Higher on Iran Peace Hopes and Tech Strength</li><li>Kevin Warsh Inherits a Fed That Wall Street Has Almost Stopped Talking About</li><li>The Anatomy of a Disconnect: How $4.35 Trillion in Corporate Profits Cleared the Way for Record Highs</li></ul>
+    <ul class="news-list"></ul>
   </div>
 
   <!-- S&P 500 PICKS -->
@@ -297,10 +300,14 @@ td{padding:11px 10px;vertical-align:middle}
               </div>
               <div class="card-price">$295.19 &nbsp;·&nbsp;
                 <span style="color:#00d4a1">+16.77% yest</span> &nbsp;·&nbsp;
-                <span class="muted">Vol 2.2×</span>
+                <span class="muted">Vol 2.3×</span>
               </div>
-              <div class="card-reasons">Pre-mkt ▲ 16.07%  ·  Vol 2.2× avg  ·  News catalyst</div>
-              <div class="news-line">▸ Salesforce earnings, OpenAI IPO filing, April PCE: What to Watch</div>
+              <div class="card-signals">
+                <span class="sig-badge" style="color:#fbbf24;border-color:#fbbf2440">RSI 72</span>
+                <span class="sig-badge" style="color:#00d4a1;border-color:#00d4a140">▲ EMA20</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 16.07%  ·  Vol 2.3× avg  ·  RS +16.6% vs index</div>
+              
               <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
             </div><div class="stock-card" style="border-color:#58a6ff;box-shadow:0 0 20px #58a6ff22;">
               <div class="card-top">
@@ -310,10 +317,14 @@ td{padding:11px 10px;vertical-align:middle}
               </div>
               <div class="card-price">$25.24 &nbsp;·&nbsp;
                 <span style="color:#00d4a1">+15.25% yest</span> &nbsp;·&nbsp;
-                <span class="muted">Vol 2.5×</span>
+                <span class="muted">Vol 2.8×</span>
               </div>
-              <div class="card-reasons">Pre-mkt ▲ 14.83%  ·  Vol 2.5× avg  ·  News catalyst</div>
-              <div class="news-line">▸ Earnings To Watch: HP (HPQ) Reports Q1 Results Tomorrow</div>
+              <div class="card-signals">
+                <span class="sig-badge" style="color:#fbbf24;border-color:#fbbf2440">RSI 75</span>
+                <span class="sig-badge" style="color:#00d4a1;border-color:#00d4a140">▲ EMA20</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 14.83%  ·  Vol 2.8× avg  ·  RS +15.1% vs index</div>
+              
               <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
             </div><div class="stock-card" style="border-color:#58a6ff;box-shadow:0 0 20px #58a6ff22;">
               <div class="card-top">
@@ -323,10 +334,14 @@ td{padding:11px 10px;vertical-align:middle}
               </div>
               <div class="card-price">$238.16 &nbsp;·&nbsp;
                 <span style="color:#00d4a1">+11.60% yest</span> &nbsp;·&nbsp;
-                <span class="muted">Vol 1.3×</span>
+                <span class="muted">Vol 1.2×</span>
               </div>
-              <div class="card-reasons">Pre-mkt ▲ 11.27%  ·  News catalyst</div>
-              <div class="news-line">▸ 10 of 11 Sectors Higher: Why the S&P’s Rally Looks Healthier Than the Headlines Suggest</div>
+              <div class="card-signals">
+                <span class="sig-badge" style="color:#fbbf24;border-color:#fbbf2440">RSI 73</span>
+                <span class="sig-badge" style="color:#00d4a1;border-color:#00d4a140">▲ EMA20</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 11.27%  ·  RS +11.4% vs index</div>
+              
               <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
             </div><div class="stock-card" style="border-color:#1e1e2e;">
               <div class="card-top">
@@ -336,88 +351,116 @@ td{padding:11px 10px;vertical-align:middle}
               </div>
               <div class="card-price">$14.93 &nbsp;·&nbsp;
                 <span style="color:#00d4a1">+9.22% yest</span> &nbsp;·&nbsp;
-                <span class="muted">Vol 1.6×</span>
+                <span class="muted">Vol 1.9×</span>
               </div>
-              <div class="card-reasons">Pre-mkt ▲ 9.06%  ·  Vol 1.6× avg  ·  News catalyst</div>
-              <div class="news-line">▸ Is Ford a Meme Stock Now? Wall Street and Retail Can’t Agree</div>
+              <div class="card-signals">
+                <span class="sig-badge" style="color:#fbbf24;border-color:#fbbf2440">RSI 75</span>
+                <span class="sig-badge" style="color:#00d4a1;border-color:#00d4a140">▲ EMA20</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 9.06%  ·  Vol 1.9× avg  ·  RS +9.0% vs index</div>
+              
               <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
             </div><div class="stock-card" style="border-color:#1e1e2e;">
               <div class="card-top">
                 <div class="rank-badge" style="background:#1e1e2e">#5</div>
+                <div class="card-ticker">MRK</div>
+                <div class="card-premkt" style="color:#00d4a1">+1.98%<span class="card-premkt-label"> pre</span></div>
+              </div>
+              <div class="card-price">$122.41 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+5.64% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol 1.6×</span>
+              </div>
+              <div class="card-signals">
+                <span class="sig-badge" style="color:#00d4a1;border-color:#00d4a140">RSI 68</span>
+                <span class="sig-badge" style="color:#00d4a1;border-color:#00d4a140">▲ EMA20</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 1.98%  ·  Vol 1.6× avg  ·  RS +5.4% vs index</div>
+              
+              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
+            </div><div class="stock-card" style="border-color:#1e1e2e;">
+              <div class="card-top">
+                <div class="rank-badge" style="background:#1e1e2e">#6</div>
                 <div class="card-ticker">AMD</div>
                 <div class="card-premkt" style="color:#00d4a1">+3.31%<span class="card-premkt-label"> pre</span></div>
               </div>
               <div class="card-price">$467.51 &nbsp;·&nbsp;
                 <span style="color:#00d4a1">+3.99% yest</span> &nbsp;·&nbsp;
-                <span class="muted">Vol 1.1×</span>
+                <span class="muted">Vol 0.8×</span>
               </div>
-              <div class="card-reasons">Pre-mkt ▲ 3.31%  ·  News catalyst</div>
-              <div class="news-line">▸ Why Are MU, SNDK Stocks Surging In Overnight Trading?</div>
+              <div class="card-signals">
+                <span class="sig-badge" style="color:#fbbf24;border-color:#fbbf2440">RSI 74</span>
+                <span class="sig-badge" style="color:#00d4a1;border-color:#00d4a140">▲ EMA20</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 3.31%  ·  RS +3.8% vs index</div>
+              
               <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
             </div><div class="stock-card" style="border-color:#1e1e2e;">
               <div class="card-top">
-                <div class="rank-badge" style="background:#1e1e2e">#6</div>
+                <div class="rank-badge" style="background:#1e1e2e">#7</div>
                 <div class="card-ticker">TXN</div>
                 <div class="card-premkt" style="color:#00d4a1">+3.43%<span class="card-premkt-label"> pre</span></div>
               </div>
               <div class="card-price">$309.21 &nbsp;·&nbsp;
                 <span style="color:#00d4a1">+3.63% yest</span> &nbsp;·&nbsp;
-                <span class="muted">Vol 1.0×</span>
+                <span class="muted">Vol 0.9×</span>
               </div>
-              <div class="card-reasons">Pre-mkt ▲ 3.43%  ·  News catalyst</div>
-              <div class="news-line">▸ Texas Instruments (TXN) Is Up 2.14% in One Week: What You Should Know</div>
+              <div class="card-signals">
+                <span class="sig-badge" style="color:#fbbf24;border-color:#fbbf2440">RSI 74</span>
+                <span class="sig-badge" style="color:#00d4a1;border-color:#00d4a140">▲ EMA20</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 3.43%  ·  RS +3.4% vs index</div>
+              
               <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
             </div><div class="stock-card" style="border-color:#1e1e2e;">
               <div class="card-top">
-                <div class="rank-badge" style="background:#1e1e2e">#7</div>
+                <div class="rank-badge" style="background:#1e1e2e">#8</div>
                 <div class="card-ticker">ADI</div>
                 <div class="card-premkt" style="color:#00d4a1">+3.04%<span class="card-premkt-label"> pre</span></div>
               </div>
               <div class="card-price">$397.07 &nbsp;·&nbsp;
                 <span style="color:#00d4a1">+3.35% yest</span> &nbsp;·&nbsp;
-                <span class="muted">Vol 0.9×</span>
+                <span class="muted">Vol 1.6×</span>
               </div>
-              <div class="card-reasons">Pre-mkt ▲ 3.04%  ·  News catalyst</div>
-              <div class="news-line">▸ Analog Devices, Inc. (ADI) Anticipates Q3 Revenue Above Estimates</div>
-              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
-            </div><div class="stock-card" style="border-color:#1e1e2e;">
-              <div class="card-top">
-                <div class="rank-badge" style="background:#1e1e2e">#8</div>
-                <div class="card-ticker">KLAC</div>
-                <div class="card-premkt" style="color:#00d4a1">+2.13%<span class="card-premkt-label"> pre</span></div>
+              <div class="card-signals">
+                <span class="sig-badge" style="color:#00d4a1;border-color:#00d4a140">RSI 49</span>
+                <span class="sig-badge" style="color:#f85149;border-color:#f8514940">▼ EMA20</span>
               </div>
-              <div class="card-price">$1,888.38 &nbsp;·&nbsp;
-                <span style="color:#00d4a1">+2.51% yest</span> &nbsp;·&nbsp;
-                <span class="muted">Vol 0.8×</span>
-              </div>
-              <div class="card-reasons">Pre-mkt ▲ 2.13%  ·  News catalyst</div>
-              <div class="news-line">▸ Will AutoZone, Grainger, or United Rentals Be the Next Big Stock Split?</div>
+              <div class="card-reasons">Pre-mkt ▲ 3.04%  ·  Vol 1.6× avg  ·  RS +3.1% vs index</div>
+              
               <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
             </div><div class="stock-card" style="border-color:#1e1e2e;">
               <div class="card-top">
                 <div class="rank-badge" style="background:#1e1e2e">#9</div>
-                <div class="card-ticker">GM</div>
-                <div class="card-premkt" style="color:#00d4a1">+2.13%<span class="card-premkt-label"> pre</span></div>
+                <div class="card-ticker">UPS</div>
+                <div class="card-premkt" style="color:#00d4a1">+2.58%<span class="card-premkt-label"> pre</span></div>
               </div>
-              <div class="card-price">$78.79 &nbsp;·&nbsp;
-                <span style="color:#00d4a1">+2.05% yest</span> &nbsp;·&nbsp;
-                <span class="muted">Vol 1.0×</span>
+              <div class="card-price">$101.02 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+2.82% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol 0.8×</span>
               </div>
-              <div class="card-reasons">Pre-mkt ▲ 2.13%  ·  News catalyst</div>
-              <div class="news-line">▸ GM, Ford, Stellantis CEOs go back to the drawing board with EVs</div>
+              <div class="card-signals">
+                <span class="sig-badge" style="color:#00d4a1;border-color:#00d4a140">RSI 58</span>
+                <span class="sig-badge" style="color:#00d4a1;border-color:#00d4a140">▲ EMA20</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 2.58%  ·  RS +2.6% vs index</div>
+              
               <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
             </div><div class="stock-card" style="border-color:#1e1e2e;">
               <div class="card-top">
                 <div class="rank-badge" style="background:#1e1e2e">#10</div>
-                <div class="card-ticker">CSCO</div>
-                <div class="card-premkt" style="color:#00d4a1">+1.59%<span class="card-premkt-label"> pre</span></div>
+                <div class="card-ticker">MPC</div>
+                <div class="card-premkt" style="color:#00d4a1">+2.31%<span class="card-premkt-label"> pre</span></div>
               </div>
-              <div class="card-price">$120.41 &nbsp;·&nbsp;
-                <span style="color:#00d4a1">+1.87% yest</span> &nbsp;·&nbsp;
+              <div class="card-price">$254.65 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+2.50% yest</span> &nbsp;·&nbsp;
                 <span class="muted">Vol 0.9×</span>
               </div>
-              <div class="card-reasons">Pre-mkt ▲ 1.59%  ·  News catalyst</div>
-              <div class="news-line">▸ Rosenblatt Raises its Price Target on Cisco Systems (CSCO)</div>
+              <div class="card-signals">
+                <span class="sig-badge" style="color:#00d4a1;border-color:#00d4a140">RSI 57</span>
+                <span class="sig-badge" style="color:#00d4a1;border-color:#00d4a140">▲ EMA20</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 2.31%  ·  RS +2.3% vs index</div>
+              
               <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
             </div></div>
         </div>
@@ -435,79 +478,86 @@ td{padding:11px 10px;vertical-align:middle}
               </div>
               <div class="card-price">$238.16 &nbsp;·&nbsp;
                 <span style="color:#00d4a1">+11.60% yest</span> &nbsp;·&nbsp;
-                <span class="muted">Vol 1.3×</span>
+                <span class="muted">Vol 1.2×</span>
               </div>
-              <div class="card-reasons">Pre-mkt ▲ 11.27%  ·  News catalyst</div>
-              <div class="news-line">▸ 10 of 11 Sectors Higher: Why the S&P’s Rally Looks Healthier Than the Headlines Suggest</div>
+              <div class="card-signals">
+                <span class="sig-badge" style="color:#fbbf24;border-color:#fbbf2440">RSI 73</span>
+                <span class="sig-badge" style="color:#00d4a1;border-color:#00d4a140">▲ EMA20</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 11.27%  ·  RS +11.5% vs index</div>
+              
               <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
             </div><div class="stock-card" style="border-color:#a371f7;box-shadow:0 0 20px #a371f722;">
               <div class="card-top">
                 <div class="rank-badge" style="background:#a371f7">#2</div>
-                <div class="card-ticker">ON</div>
-                <div class="card-premkt" style="color:#00d4a1">+5.64%<span class="card-premkt-label"> pre</span></div>
-              </div>
-              <div class="card-price">$116.20 &nbsp;·&nbsp;
-                <span style="color:#00d4a1">+6.01% yest</span> &nbsp;·&nbsp;
-                <span class="muted">Vol 0.9×</span>
-              </div>
-              <div class="card-reasons">Pre-mkt ▲ 5.64%  ·  News catalyst</div>
-              <div class="news-line">▸ Mizuho Maintains an “Outperform” Rating on ON Semiconductor Corporation (ON)</div>
-              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
-            </div><div class="stock-card" style="border-color:#a371f7;box-shadow:0 0 20px #a371f722;">
-              <div class="card-top">
-                <div class="rank-badge" style="background:#a371f7">#3</div>
-                <div class="card-ticker">NXPI</div>
-                <div class="card-premkt" style="color:#00d4a1">+5.57%<span class="card-premkt-label"> pre</span></div>
-              </div>
-              <div class="card-price">$316.47 &nbsp;·&nbsp;
-                <span style="color:#00d4a1">+5.71% yest</span> &nbsp;·&nbsp;
-                <span class="muted">Vol 0.9×</span>
-              </div>
-              <div class="card-reasons">Pre-mkt ▲ 5.57%  ·  News catalyst</div>
-              <div class="news-line">▸ 3 Large-Cap Stocks with Questionable Fundamentals</div>
-              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
-            </div><div class="stock-card" style="border-color:#1e1e2e;">
-              <div class="card-top">
-                <div class="rank-badge" style="background:#1e1e2e">#4</div>
                 <div class="card-ticker">SMCI</div>
                 <div class="card-premkt" style="color:#00d4a1">+6.11%<span class="card-premkt-label"> pre</span></div>
               </div>
               <div class="card-price">$35.58 &nbsp;·&nbsp;
                 <span style="color:#00d4a1">+6.34% yest</span> &nbsp;·&nbsp;
-                <span class="muted">Vol 1.3×</span>
+                <span class="muted">Vol 1.1×</span>
               </div>
-              <div class="card-reasons">Pre-mkt ▲ 6.11%  ·  News catalyst</div>
-              <div class="news-line">▸ NBIS vs. SMCI: Which AI Infrastructure Stock is the Better Pick?</div>
+              <div class="card-signals">
+                <span class="sig-badge" style="color:#fbbf24;border-color:#fbbf2440">RSI 70</span>
+                <span class="sig-badge" style="color:#00d4a1;border-color:#00d4a140">▲ EMA20</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 6.11%  ·  RS +6.2% vs index</div>
+              
               <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
-            </div><div class="stock-card" style="border-color:#1e1e2e;">
+            </div><div class="stock-card" style="border-color:#a371f7;box-shadow:0 0 20px #a371f722;">
               <div class="card-top">
-                <div class="rank-badge" style="background:#1e1e2e">#5</div>
+                <div class="rank-badge" style="background:#a371f7">#3</div>
                 <div class="card-ticker">ZS</div>
                 <div class="card-premkt" style="color:#00d4a1">+5.42%<span class="card-premkt-label"> pre</span></div>
               </div>
               <div class="card-price">$182.37 &nbsp;·&nbsp;
                 <span style="color:#00d4a1">+6.64% yest</span> &nbsp;·&nbsp;
-                <span class="muted">Vol 1.0×</span>
+                <span class="muted">Vol 1.3×</span>
               </div>
-              <div class="card-reasons">Pre-mkt ▲ 5.42%  ·  News catalyst</div>
-              <div class="news-line">▸ As Zscaler Doubles Down on AI Security, ZS Stock Still Needs More to Justify Its Steep Valuation</div>
+              <div class="card-signals">
+                <span class="sig-badge" style="color:#f85149;border-color:#f8514940">RSI 78</span>
+                <span class="sig-badge" style="color:#00d4a1;border-color:#00d4a140">▲ EMA20</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 5.42%  ·  RS +6.6% vs index</div>
+              
+              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
+            </div><div class="stock-card" style="border-color:#1e1e2e;">
+              <div class="card-top">
+                <div class="rank-badge" style="background:#1e1e2e">#4</div>
+                <div class="card-ticker">ON</div>
+                <div class="card-premkt" style="color:#00d4a1">+5.64%<span class="card-premkt-label"> pre</span></div>
+              </div>
+              <div class="card-price">$116.20 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+6.01% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol 0.7×</span>
+              </div>
+              <div class="card-signals">
+                <span class="sig-badge" style="color:#fbbf24;border-color:#fbbf2440">RSI 68</span>
+                <span class="sig-badge" style="color:#00d4a1;border-color:#00d4a140">▲ EMA20</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 5.64%  ·  RS +5.9% vs index</div>
+              
+              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
+            </div><div class="stock-card" style="border-color:#1e1e2e;">
+              <div class="card-top">
+                <div class="rank-badge" style="background:#1e1e2e">#5</div>
+                <div class="card-ticker">NXPI</div>
+                <div class="card-premkt" style="color:#00d4a1">+5.57%<span class="card-premkt-label"> pre</span></div>
+              </div>
+              <div class="card-price">$316.47 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+5.71% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol 0.8×</span>
+              </div>
+              <div class="card-signals">
+                <span class="sig-badge" style="color:#fbbf24;border-color:#fbbf2440">RSI 71</span>
+                <span class="sig-badge" style="color:#00d4a1;border-color:#00d4a140">▲ EMA20</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 5.57%  ·  RS +5.6% vs index</div>
+              
               <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
             </div><div class="stock-card" style="border-color:#1e1e2e;">
               <div class="card-top">
                 <div class="rank-badge" style="background:#1e1e2e">#6</div>
-                <div class="card-ticker">INTU</div>
-                <div class="card-premkt" style="color:#00d4a1">+3.93%<span class="card-premkt-label"> pre</span></div>
-              </div>
-              <div class="card-price">$319.94 &nbsp;·&nbsp;
-                <span style="color:#00d4a1">+4.19% yest</span> &nbsp;·&nbsp;
-                <span class="muted">Vol 1.3×</span>
-              </div>
-              <div class="card-reasons">Pre-mkt ▲ 3.93%  ·  News catalyst</div>
-              <div class="news-line">▸ Do Wall Street Analysts Like Intuit Stock?</div>
-              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
-            </div><div class="stock-card" style="border-color:#1e1e2e;">
-              <div class="card-top">
-                <div class="rank-badge" style="background:#1e1e2e">#7</div>
                 <div class="card-ticker">TTD</div>
                 <div class="card-premkt" style="color:#00d4a1">+4.87%<span class="card-premkt-label"> pre</span></div>
               </div>
@@ -515,47 +565,80 @@ td{padding:11px 10px;vertical-align:middle}
                 <span style="color:#00d4a1">+5.17% yest</span> &nbsp;·&nbsp;
                 <span class="muted">Vol 0.9×</span>
               </div>
-              <div class="card-reasons">Pre-mkt ▲ 4.87%  ·  News catalyst</div>
-              <div class="news-line">▸ Why The Trade Desk (TTD) Stock Is Up Today</div>
+              <div class="card-signals">
+                <span class="sig-badge" style="color:#00d4a1;border-color:#00d4a140">RSI 50</span>
+                <span class="sig-badge" style="color:#00d4a1;border-color:#00d4a140">▲ EMA20</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 4.87%  ·  RS +5.1% vs index</div>
+              
               <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
             </div><div class="stock-card" style="border-color:#1e1e2e;">
               <div class="card-top">
-                <div class="rank-badge" style="background:#1e1e2e">#8</div>
-                <div class="card-ticker">MCHP</div>
-                <div class="card-premkt" style="color:#00d4a1">+2.15%<span class="card-premkt-label"> pre</span></div>
-              </div>
-              <div class="card-price">$93.43 &nbsp;·&nbsp;
-                <span style="color:#00d4a1">+3.06% yest</span> &nbsp;·&nbsp;
-                <span class="muted">Vol 1.0×</span>
-              </div>
-              <div class="card-reasons">Pre-mkt ▲ 2.15%  ·  News catalyst</div>
-              <div class="news-line">▸ Universal Display and Microchip Technology Shares Are Soaring, What You Need To Know</div>
-              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
-            </div><div class="stock-card" style="border-color:#1e1e2e;">
-              <div class="card-top">
-                <div class="rank-badge" style="background:#1e1e2e">#9</div>
+                <div class="rank-badge" style="background:#1e1e2e">#7</div>
                 <div class="card-ticker">CDNS</div>
                 <div class="card-premkt" style="color:#00d4a1">+3.73%<span class="card-premkt-label"> pre</span></div>
               </div>
               <div class="card-price">$373.59 &nbsp;·&nbsp;
                 <span style="color:#00d4a1">+4.22% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol 0.9×</span>
+              </div>
+              <div class="card-signals">
+                <span class="sig-badge" style="color:#fbbf24;border-color:#fbbf2440">RSI 73</span>
+                <span class="sig-badge" style="color:#00d4a1;border-color:#00d4a140">▲ EMA20</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 3.73%  ·  RS +4.1% vs index</div>
+              
+              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
+            </div><div class="stock-card" style="border-color:#1e1e2e;">
+              <div class="card-top">
+                <div class="rank-badge" style="background:#1e1e2e">#8</div>
+                <div class="card-ticker">SNPS</div>
+                <div class="card-premkt" style="color:#00d4a1">+3.30%<span class="card-premkt-label"> pre</span></div>
+              </div>
+              <div class="card-price">$524.74 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+4.12% yest</span> &nbsp;·&nbsp;
                 <span class="muted">Vol 1.1×</span>
               </div>
-              <div class="card-reasons">Pre-mkt ▲ 3.73%  ·  News catalyst</div>
-              <div class="news-line">▸ Cadence Design Systems, Inc. (CDNS) is Attracting Investor Attention: Here is What You Should Know</div>
+              <div class="card-signals">
+                <span class="sig-badge" style="color:#fbbf24;border-color:#fbbf2440">RSI 72</span>
+                <span class="sig-badge" style="color:#00d4a1;border-color:#00d4a140">▲ EMA20</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 3.30%  ·  RS +4.0% vs index</div>
+              
+              <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
+            </div><div class="stock-card" style="border-color:#1e1e2e;">
+              <div class="card-top">
+                <div class="rank-badge" style="background:#1e1e2e">#9</div>
+                <div class="card-ticker">GFS</div>
+                <div class="card-premkt" style="color:#00d4a1">+0.55%<span class="card-premkt-label"> pre</span></div>
+              </div>
+              <div class="card-price">$85.64 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+5.27% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol 2.4×</span>
+              </div>
+              <div class="card-signals">
+                <span class="sig-badge" style="color:#fbbf24;border-color:#fbbf2440">RSI 73</span>
+                <span class="sig-badge" style="color:#00d4a1;border-color:#00d4a140">▲ EMA20</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 0.55%  ·  Vol 2.4× avg  ·  RS +5.2% vs index</div>
+              
               <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
             </div><div class="stock-card" style="border-color:#1e1e2e;">
               <div class="card-top">
                 <div class="rank-badge" style="background:#1e1e2e">#10</div>
-                <div class="card-ticker">TEAM</div>
-                <div class="card-premkt" style="color:#00d4a1">+2.63%<span class="card-premkt-label"> pre</span></div>
+                <div class="card-ticker">AMD</div>
+                <div class="card-premkt" style="color:#00d4a1">+3.31%<span class="card-premkt-label"> pre</span></div>
               </div>
-              <div class="card-price">$85.42 &nbsp;·&nbsp;
-                <span style="color:#00d4a1">+3.94% yest</span> &nbsp;·&nbsp;
-                <span class="muted">Vol 0.9×</span>
+              <div class="card-price">$467.51 &nbsp;·&nbsp;
+                <span style="color:#00d4a1">+3.99% yest</span> &nbsp;·&nbsp;
+                <span class="muted">Vol 0.8×</span>
               </div>
-              <div class="card-reasons">Pre-mkt ▲ 2.63%  ·  News catalyst</div>
-              <div class="news-line">▸ Wall Street Analysts Believe Atlassian (TEAM) Could Rally 49.75%: Here's is How to Trade</div>
+              <div class="card-signals">
+                <span class="sig-badge" style="color:#fbbf24;border-color:#fbbf2440">RSI 74</span>
+                <span class="sig-badge" style="color:#00d4a1;border-color:#00d4a140">▲ EMA20</span>
+              </div>
+              <div class="card-reasons">Pre-mkt ▲ 3.31%  ·  RS +3.9% vs index</div>
+              
               <div class="card-strategy">Wait EMA 9 ✕ EMA 21 on 5m/10m · Trail 1.5%</div>
             </div></div>
         </div>
