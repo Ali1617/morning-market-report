@@ -830,17 +830,7 @@ def send_email(html, subject):
 
 # ─── DST CHECK ────────────────────────────────────────────────────────────────
 def check_et_time():
-    try:
-        from zoneinfo import ZoneInfo
-        now = datetime.now(ZoneInfo("America/New_York"))
-        # Allow the full 8 AM hour — covers any GitHub Actions spin-up delay.
-        # The 9:30 AM backup cron (winter guard) is blocked since hour=9.
-        if now.hour != 8:
-            print(f"Outside 8 AM ET window ({now.strftime('%I:%M %p ET')}), skipping.")
-            sys.exit(0)
-        print(f"  Time check passed: {now.strftime('%I:%M %p ET')}")
-    except:
-        pass
+    pass  # Single cron at 12:30 UTC — no time check needed
 
 
 # ─── MAIN ─────────────────────────────────────────────────────────────────────
